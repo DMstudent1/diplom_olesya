@@ -1,281 +1,332 @@
 <template>
-  <div class="dadata-suggest">
-    <v-text-field
-      :model-value="inputValue"
-      :label="label"
-      :placeholder="placeholder"
-      :prepend-inner-icon="icon"
-      :loading="loading"
-      :variant="variant"
-      :rules="rules"
-      :error-messages="errorMessages"
-      @update:model-value="onInput"
-      @focus="onFocus"
-      @blur="onBlur"
-      ref="inputRef"
-    />
-    
-    <!-- Выпадающий список подсказок -->
-    <div 
-      v-if="showSuggestions && suggestions.length > 0" 
-      class="suggestions-dropdown"
-      @mouseleave="hideSuggestions"
-    >
-      <div
-        v-for="(suggestion, index) in suggestions"
-        :key="index"
-        class="suggestion-item"
-        @click="selectSuggestion(suggestion)"
-        @mouseenter="currentIndex = index"
-        :class="{ active: currentIndex === index }"
-      >
-        <div class="d-flex align-center">
-          <v-icon size="20" class="mr-2" color="grey-darken-1">
-            {{ getIconForType(suggestion) }}
-          </v-icon>
-          <div>
-            <div class="suggestion-value" v-html="highlightMatch(suggestion.value)"></div>
-            <div v-if="suggestion.data?.city" class="suggestion-detail">
-              {{ suggestion.data.city }}
-            </div>
-            <div v-if="suggestion.data?.postal_code" class="suggestion-detail">
-              Индекс: {{ suggestion.data.postal_code }}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+    <v-row justify="center" align="center" class="fill-height">
+        <v-col cols="12" sm="10" md="8" lg="6" xl="4">
+            <v-card class="pa-4" elevation="10">
+                <v-card-title class="text-h4 text-center py-4">
+                    Создать аккаунт
+                </v-card-title>
+                
+                <v-card-text>
+                    <v-form ref="formRef" v-model="valid">
+                        <v-text-field
+                            v-model="form.name"
+                            label="ФИО"
+                            variant="outlined"
+                            :rules="[v => !!v || 'Введите ФИО']"
+                            prepend-inner-icon="mdi-account"
+                            class="mb-3"
+                        ></v-text-field>
+                        
+                        <v-text-field
+                            v-model="form.phone"
+                            label="Телефон"
+                            variant="outlined"
+                            :rules="phoneRules"
+                            prepend-inner-icon="mdi-phone"
+                            class="mb-3"
+                            @input="formatPhone"
+                            placeholder="+7 (___) ___-__-__"
+                        ></v-text-field>
+                        
+                        <v-text-field
+                            v-model="form.email"
+                            label="Email"
+                            type="email"
+                            variant="outlined"
+                            :rules="emailRules"
+                            prepend-inner-icon="mdi-email"
+                            class="mb-3"
+                        ></v-text-field>
+                        
+                        <!-- ✅ DaData для адреса (вместо select) -->
+                        <DadataSuggest
+                            v-model="form.address"
+                            label="Адрес"
+                            placeholder="Введите город или полный адрес..."
+                            icon="mdi-map-marker"
+                            type="address"
+                            variant="outlined"
+                            :rules="[v => !!v || 'Введите адрес']"
+                            class="mb-3"
+                            @select="onAddressSelect"
+                        />
+                        
+                        <v-text-field
+                            v-model="form.password"
+                            label="Пароль"
+                            :type="showPassword ? 'text' : 'password'"
+                            variant="outlined"
+                            :rules="passwordRules"
+                            prepend-inner-icon="mdi-lock"
+                            :append-inner-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
+                            @click:append-inner="showPassword = !showPassword"
+                            class="mb-2"
+                        ></v-text-field>
+                        
+                        <v-progress-linear
+                            :model-value="passwordStrength"
+                            :color="strengthColor"
+                            height="8"
+                            class="mb-2"
+                        ></v-progress-linear>
+                        
+                        <div class="d-flex justify-space-between mb-4">
+                            <span class="text-caption">Сложность пароля:</span>
+                            <span class="text-caption font-weight-bold" :style="{ color: strengthColor }">
+                                {{ strengthText }}
+                            </span>
+                        </div>
+                        
+                        <v-text-field
+                            v-model="form.passwordConfirmation"
+                            label="Подтверждение пароля"
+                            :type="showPasswordConfirmation ? 'text' : 'password'"
+                            variant="outlined"
+                            :rules="passwordConfirmationRules"
+                            prepend-inner-icon="mdi-lock-check"
+                            :append-inner-icon="showPasswordConfirmation ? 'mdi-eye-off' : 'mdi-eye'"
+                            @click:append-inner="showPasswordConfirmation = !showPasswordConfirmation"
+                            class="mb-4"
+                        ></v-text-field>
+                        
+                        <v-btn
+                            color="green"
+                            size="large"
+                            block
+                            :disabled="!valid || !isPasswordStrongEnough || loading"
+                            :loading="loading"
+                            @click="submitForm"
+                        >
+                            Создать аккаунт
+                        </v-btn>
+                        
+                        <v-alert
+                            v-if="errorMessage"
+                            type="error"
+                            variant="tonal"
+                            class="mt-4"
+                            closable
+                            @click:close="errorMessage = ''"
+                        >
+                            {{ errorMessage }}
+                        </v-alert>
+                        
+                        <v-alert
+                            v-if="successMessage"
+                            type="success"
+                            variant="tonal"
+                            class="mt-4"
+                            closable
+                            @click:close="successMessage = ''"
+                        >
+                            {{ successMessage }}
+                        </v-alert>
+                    </v-form>
+                </v-card-text>
+                
+                <v-card-actions class="justify-center">
+                    <span class="text-caption">Уже есть аккаунт?</span>
+                    <router-link to="/login" class="text-decoration-none">
+                        <v-btn variant="text" color="green" size="default">
+                            Войти
+                        </v-btn>
+                    </router-link>
+                </v-card-actions>
+            </v-card>
+        </v-col>
+    </v-row>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
-import axios from 'axios'
+import { ref, computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import api from '@/services/api'
+import DadataSuggest from '@/components/DadataSuggest.vue'
 
-const props = defineProps({
-  modelValue: String,
-  label: String,
-  placeholder: String,
-  icon: String,
-  variant: String,
-  rules: Array,
-  errorMessages: Array,
-  type: {
-    type: String,
-    default: 'address'
-  },
-  minLength: {
-    type: Number,
-    default: 2
-  },
-  debounceTime: {
-    type: Number,
-    default: 300
-  }
+const router = useRouter()
+
+const form = ref({
+    name: '',
+    phone: '',
+    email: '',
+    address: '',
+    password: '',
+    passwordConfirmation: ''
 })
 
-const emit = defineEmits(['update:modelValue', 'select'])
-
-const inputRef = ref(null)
-const inputValue = ref(props.modelValue || '')  // ← локальное значение
+const formRef = ref(null)
+const valid = ref(false)
+const showPassword = ref(false)
+const showPasswordConfirmation = ref(false)
 const loading = ref(false)
-const suggestions = ref([])
-const showSuggestions = ref(false)
-const currentIndex = ref(-1)
-let debounceTimer = null
-let searchQuery = ''
+const errorMessage = ref('')
+const successMessage = ref('')
 
-// Следим за изменением modelValue извне
-watch(() => props.modelValue, (newValue) => {
-  if (newValue !== inputValue.value) {
-    inputValue.value = newValue || ''
-  }
-})
+watch(form, () => {
+    if (formRef.value) {
+        formRef.value.validate()
+    }
+}, { deep: true })
 
-const onInput = (value) => {
-  inputValue.value = value
-  searchQuery = value
-  
-  // ✅ ВАЖНО: сразу обновляем modelValue при ручном вводе
-  emit('update:modelValue', value)
-  
-  if (debounceTimer) clearTimeout(debounceTimer)
-  
-  if (!value || value.length < props.minLength) {
-    suggestions.value = []
-    showSuggestions.value = false
-    return
-  }
-  
-  debounceTimer = setTimeout(async () => {
-    await fetchSuggestions(value)
-  }, props.debounceTime)
+// Обработчик выбора адреса из DaData
+const onAddressSelect = (suggestion) => {
+    if (suggestion?.data) {
+        console.log('Выбран адрес:', suggestion.value)
+        console.log('Детали:', suggestion.data)
+        
+        // Можно сохранить город отдельно, если нужно
+        // form.value.city = suggestion.data.city || suggestion.data.settlement || ''
+    }
 }
 
-const fetchSuggestions = async (query) => {
-  if (!query || typeof query !== 'string') return
-  
-  loading.value = true
-  
-  try {
-    const response = await axios.post('/api/dadata/suggest', {
-      query: String(query),
-      type: props.type,
-      count: 10
-    })
+const formatPhone = (event) => {
+    let value = event.target.value.replace(/\D/g, '')
     
-    suggestions.value = response.data.suggestions || []
-    showSuggestions.value = suggestions.value.length > 0
-    currentIndex.value = -1
-  } catch (error) {
-    console.error('Ошибка DaData:', error)
-    suggestions.value = []
-  } finally {
-    loading.value = false
-  }
-}
-
-const selectSuggestion = (suggestion) => {
-  // ✅ Обновляем локальное значение
-  inputValue.value = suggestion.value
-  
-  // ✅ ОБЯЗАТЕЛЬНО: отправляем событие update:modelValue
-  emit('update:modelValue', suggestion.value)
-  
-  // ✅ Отправляем событие select с полными данными
-  emit('select', suggestion)
-  
-  // Скрываем подсказки
-  showSuggestions.value = false
-  currentIndex.value = -1
-}
-
-const onFocus = () => {
-  if (suggestions.value.length > 0 && searchQuery?.length >= props.minLength) {
-    showSuggestions.value = true
-  }
-}
-
-const onBlur = () => {
-  // Даем время на клик по подсказке
-  setTimeout(() => {
-    showSuggestions.value = false
-  }, 200)
-}
-
-const hideSuggestions = () => {
-  showSuggestions.value = false
-}
-
-const getIconForType = (suggestion) => {
-  if (props.type === 'address') return 'mdi-map-marker'
-  if (props.type === 'party') return 'mdi-domain'
-  if (props.type === 'fio') return 'mdi-account'
-  return 'mdi-magnify'
-}
-
-const highlightMatch = (text) => {
-  if (!searchQuery || searchQuery.length < 2) return text
-  
-  const regex = new RegExp(`(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')
-  return text.replace(regex, '<mark class="highlight">$1</mark>')
-}
-
-// Обработка клавиатуры
-const onKeyDown = (event) => {
-  if (!showSuggestions.value) return
-  
-  switch (event.key) {
-    case 'ArrowDown':
-      event.preventDefault()
-      currentIndex.value = (currentIndex.value + 1) % suggestions.value.length
-      break
-    case 'ArrowUp':
-      event.preventDefault()
-      currentIndex.value = currentIndex.value <= 0 
-        ? suggestions.value.length - 1 
-        : currentIndex.value - 1
-      break
-    case 'Enter':
-      event.preventDefault()
-      if (currentIndex.value >= 0 && suggestions.value[currentIndex.value]) {
-        selectSuggestion(suggestions.value[currentIndex.value])
-      }
-      break
-    case 'Escape':
-      showSuggestions.value = false
-      break
-  }
-}
-
-// Добавляем обработчик клавиатуры после монтирования
-import { onMounted, onBeforeUnmount } from 'vue'
-onMounted(() => {
-  if (inputRef.value?.$el) {
-    const input = inputRef.value.$el.querySelector('input')
-    if (input) {
-      input.addEventListener('keydown', onKeyDown)
+    if (value.length > 11) value = value.slice(0, 11)
+    
+    let formatted = ''
+    if (value.length > 0) {
+        formatted = '+7'
+        if (value.length > 1) {
+            formatted += ' (' + value.slice(1, 4)
+        }
+        if (value.length >= 5) {
+            formatted += ') ' + value.slice(4, 7)
+        }
+        if (value.length >= 8) {
+            formatted += '-' + value.slice(7, 9)
+        }
+        if (value.length >= 10) {
+            formatted += '-' + value.slice(9, 11)
+        }
     }
-  }
+    
+    form.value.phone = formatted
+}
+
+const phoneRules = [
+    v => !!v || 'Введите номер телефона',
+    v => {
+        const digits = v.replace(/\D/g, '')
+        return digits.length === 11 || 'Введите полный номер телефона (11 цифр)'
+    }
+]
+
+const emailRules = [
+    v => !!v || 'Введите email',
+    v => /.+@.+\..+/.test(v) || 'Введите корректный email'
+]
+
+const checkPasswordStrength = (password) => {
+    let strength = 0
+    
+    if (!password) return 0
+    
+    if (password.length >= 8) strength++
+    if (password.length >= 12) strength++
+    if (/[A-ZА-Я]/.test(password)) strength++
+    if (/[a-zа-я]/.test(password)) strength++
+    if (/[0-9]/.test(password)) strength++
+    if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) strength++
+    
+    return Math.min(5, strength)
+}
+
+const passwordStrength = computed(() => {
+    if (!form.value.password) return 0
+    return (checkPasswordStrength(form.value.password) / 5) * 100
 })
 
-onBeforeUnmount(() => {
-  if (debounceTimer) clearTimeout(debounceTimer)
-  if (inputRef.value?.$el) {
-    const input = inputRef.value.$el.querySelector('input')
-    if (input) {
-      input.removeEventListener('keydown', onKeyDown)
-    }
-  }
+const strengthColor = computed(() => {
+    const strength = passwordStrength.value
+    if (strength < 30) return 'red'
+    if (strength < 60) return 'orange'
+    if (strength < 80) return 'yellow-darken-2'
+    return 'green'
 })
+
+const strengthText = computed(() => {
+    const strength = passwordStrength.value
+    if (strength < 30) return 'Слабый'
+    if (strength < 60) return 'Средний'
+    if (strength < 80) return 'Хороший'
+    return 'Сложный'
+})
+
+const isPasswordStrongEnough = computed(() => {
+    return passwordStrength.value >= 30
+})
+
+const passwordRules = [
+    v => !!v || 'Введите пароль',
+    v => v.length >= 8 || 'Пароль должен содержать минимум 8 символов'
+]
+
+const passwordConfirmationRules = [
+    v => !!v || 'Подтвердите пароль',
+    v => v === form.value.password || 'Пароли не совпадают'
+]
+
+const submitForm = async () => {
+    if (!valid.value || !isPasswordStrongEnough.value) return
+    
+    loading.value = true
+    errorMessage.value = ''
+    successMessage.value = ''
+    
+    const cleanPhone = form.value.phone.replace(/\D/g, '')
+    
+    const requestData = {
+        name: form.value.name,
+        address: form.value.address,  // ← полный адрес от DaData
+        email: form.value.email,
+        password: form.value.password,
+        phone: cleanPhone
+    }
+    
+    try {
+        const response = await api.post('/register', requestData)
+        
+        console.log('Регистрация успешна:', response.data)
+        
+        successMessage.value = 'Регистрация успешна! Перенаправление на страницу входа...'
+        
+        setTimeout(() => {
+            router.push('/login')
+        }, 2000)
+        
+    } catch (error) {
+        console.error('Ошибка при регистрации:', error)
+        
+        if (error.response) {
+            const status = error.response.status
+            const data = error.response.data
+            
+            if (status === 422 && data.errors) {
+                const errorMessages = Object.values(data.errors).flat()
+                errorMessage.value = errorMessages.join(', ')
+            } else if (data.message) {
+                errorMessage.value = data.message
+            } else {
+                errorMessage.value = 'Произошла ошибка при регистрации. Попробуйте позже.'
+            }
+        } else if (error.request) {
+            errorMessage.value = 'Ошибка сети. Проверьте подключение к интернету.'
+        } else {
+            errorMessage.value = 'Произошла ошибка. Попробуйте позже.'
+        }
+    } finally {
+        loading.value = false
+    }
+}
 </script>
 
 <style scoped>
-.dadata-suggest {
-  position: relative;
+.fill-height {
+    min-height: calc(100vh - 64px);
 }
 
-.suggestions-dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  max-height: 300px;
-  overflow-y: auto;
-  background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
-  margin-top: 4px;
-}
-
-.suggestion-item {
-  padding: 12px 16px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.suggestion-item:hover,
-.suggestion-item.active {
-  background-color: #f5f5f5;
-}
-
-.suggestion-value {
-  font-size: 14px;
-  color: #333;
-}
-
-.suggestion-detail {
-  font-size: 12px;
-  color: #666;
-  margin-top: 2px;
-}
-
-:deep(.highlight) {
-  background-color: #fff3cd;
-  font-weight: bold;
-  padding: 0;
+.v-progress-linear {
+    transition: all 0.3s ease;
 }
 </style>
