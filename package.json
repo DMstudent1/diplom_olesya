@@ -12,11 +12,15 @@
         "concurrently": "^9.0.1",
         "laravel-vite-plugin": "^3.0.0",
         "tailwindcss": "^4.0.0",
-        "vite": "^8.0.0"
+        "vite": "^8.0.0",
+        "vite-plugin-static-copy": "^4.1.0"
     },
     "dependencies": {
         "@mdi/font": "^7.4.47",
         "@vitejs/plugin-vue": "^6.0.5",
+        "bankcard": "^3.1.9",
+        "card-bin-info": "^0.0.8",
+        "card-info": "^1.2.4",
         "pinia": "^3.0.4",
         "v-mask": "^2.3.0",
         "vue": "^3.5.30",

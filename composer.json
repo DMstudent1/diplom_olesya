@@ -10,6 +10,7 @@
         "laravel/framework": "^13.0",
         "laravel/tinker": "^3.0",
         "santigarcor/laratrust": "^8.5",
+        "spatie/laravel-medialibrary": "^11.23",
         "tymon/jwt-auth": "^2.3",
         "yajra/laravel-datatables-fractal": "^13.0",
         "yajra/laravel-datatables-oracle": "^13.0"

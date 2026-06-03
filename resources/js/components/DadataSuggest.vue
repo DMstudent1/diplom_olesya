@@ -1,14 +1,13 @@
 <template>
   <div class="dadata-suggest">
     <v-text-field
-      :model-value="inputValue"
+      :model-value="modelValue"
       :label="label"
       :placeholder="placeholder"
       :prepend-inner-icon="icon"
       :loading="loading"
       :variant="variant"
       :rules="rules"
-      :error-messages="errorMessages"
       @update:model-value="onInput"
       @focus="onFocus"
       @blur="onBlur"
@@ -49,7 +48,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import axios from 'axios'
 
 const props = defineProps({
@@ -59,10 +58,9 @@ const props = defineProps({
   icon: String,
   variant: String,
   rules: Array,
-  errorMessages: Array,
   type: {
     type: String,
-    default: 'address'
+    default: 'address' // address, party, fio
   },
   minLength: {
     type: Number,
@@ -77,7 +75,6 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'select'])
 
 const inputRef = ref(null)
-const inputValue = ref(props.modelValue || '')  // ← локальное значение
 const loading = ref(false)
 const suggestions = ref([])
 const showSuggestions = ref(false)
@@ -85,23 +82,13 @@ const currentIndex = ref(-1)
 let debounceTimer = null
 let searchQuery = ''
 
-// Следим за изменением modelValue извне
-watch(() => props.modelValue, (newValue) => {
-  if (newValue !== inputValue.value) {
-    inputValue.value = newValue || ''
-  }
-})
-
 const onInput = (value) => {
-  inputValue.value = value
   searchQuery = value
-  
-  // ✅ ВАЖНО: сразу обновляем modelValue при ручном вводе
   emit('update:modelValue', value)
   
   if (debounceTimer) clearTimeout(debounceTimer)
   
-  if (!value || value.length < props.minLength) {
+  if (value.length < props.minLength) {
     suggestions.value = []
     showSuggestions.value = false
     return
@@ -113,13 +100,13 @@ const onInput = (value) => {
 }
 
 const fetchSuggestions = async (query) => {
-  if (!query || typeof query !== 'string') return
+  if (!query) return
   
   loading.value = true
   
   try {
     const response = await axios.post('/api/dadata/suggest', {
-      query: String(query),
+      query: query,
       type: props.type,
       count: 10
     })
@@ -136,22 +123,20 @@ const fetchSuggestions = async (query) => {
 }
 
 const selectSuggestion = (suggestion) => {
-  // ✅ Обновляем локальное значение
-  inputValue.value = suggestion.value
-  
-  // ✅ ОБЯЗАТЕЛЬНО: отправляем событие update:modelValue
   emit('update:modelValue', suggestion.value)
-  
-  // ✅ Отправляем событие select с полными данными
   emit('select', suggestion)
-  
-  // Скрываем подсказки
   showSuggestions.value = false
   currentIndex.value = -1
+  
+  // Опционально: сохраняем дополнительные данные
+  if (props.type === 'address' && suggestion.data) {
+    // Можно сохранить детали адреса в store
+    console.log('Выбран адрес:', suggestion.data)
+  }
 }
 
 const onFocus = () => {
-  if (suggestions.value.length > 0 && searchQuery?.length >= props.minLength) {
+  if (suggestions.value.length > 0 && searchQuery.length >= props.minLength) {
     showSuggestions.value = true
   }
 }
@@ -208,8 +193,6 @@ const onKeyDown = (event) => {
   }
 }
 
-// Добавляем обработчик клавиатуры после монтирования
-import { onMounted, onBeforeUnmount } from 'vue'
 onMounted(() => {
   if (inputRef.value?.$el) {
     const input = inputRef.value.$el.querySelector('input')

@@ -25,7 +25,7 @@ class RegisterRequest extends FormRequest
     {
         return [
             'name' => 'required|string|max:255',
-            'city' => 'required|string|max:100',
+            'address' => 'required|string|max:250',
             'email' => 'required|email|unique:users',
             'password' => 'required|min:8',
             'phone' => ['required', 'string', new PhoneRule(table: 'users')],

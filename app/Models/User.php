@@ -19,7 +19,7 @@ class User extends Authenticatable implements JWTSubject, LaratrustUser
         'name',
         'email',
         'phone',
-        'city',
+        'address',
         'password',
     ];
 

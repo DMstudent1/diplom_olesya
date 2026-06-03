@@ -1,6 +1,7 @@
-import { defineConfig } from 'vite';
+import { defineConfig, normalizePath } from 'vite';
 import laravel from 'laravel-vite-plugin';
 import vue from '@vitejs/plugin-vue';
+import { viteStaticCopy } from 'vite-plugin-static-copy';
 import path from 'path';
 
 export default defineConfig({
@@ -17,6 +18,25 @@ export default defineConfig({
                 },
             },
         }),
+        // Добавляем плагин для копирования логотипов CardInfo
+        viteStaticCopy({
+            targets: [
+                {
+                    src: normalizePath(
+                        path.resolve(__dirname, 'node_modules/card-info/dist/banks-logos/**/*')
+                    ),
+                    dest: 'card-info/banks-logos'
+                },
+                {
+                    src: normalizePath(
+                        path.resolve(__dirname, 'node_modules/card-info/dist/brands-logos/**/*')
+                    ),
+                    dest: 'card-info/brands-logos'
+                }
+            ],
+            // Опционально: для отладки (можно раскомментировать)
+            // verbose: true,
+        }),
     ],
     define: {
         'process.env': {}
@@ -31,5 +51,20 @@ export default defineConfig({
             '@stores': path.resolve(__dirname, 'resources/js/stores'),
             '@services': path.resolve(__dirname, 'resources/js/services'),
         }
+    },
+    build: {
+        outDir: 'public/build',
+        emptyOutDir: true,
+        manifest: 'manifest.json',
+        rollupOptions: {
+            output: {
+                entryFileNames: 'assets/[name].[hash].js',
+                chunkFileNames: 'assets/[name].[hash].js',
+                assetFileNames: 'assets/[name].[hash].[ext]'
+            }
+        }
+    },
+    server: {
+        manifest: 'manifest.json'
     }
 });

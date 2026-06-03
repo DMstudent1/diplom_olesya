@@ -31,6 +31,7 @@ class ProductRequest extends FormRequest
             'count' => 'required|integer|min:0',
             'description' => 'nullable|string|max:1000',
             'characteristics' => 'nullable|json',
+            'img' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
         ];
     }
 
@@ -64,6 +65,9 @@ class ProductRequest extends FormRequest
             'description.max' => 'Описание не должно превышать 1000 символов.',
             
             'characteristics.json' => 'Характеристики должны быть в формате JSON.',
+            'img.image' => 'Загруженный файл должен быть изображением.',
+            'img.mimes' => 'Изображение должно быть в формате: jpeg, png, jpg, gif, webp.',
+            'img.max' => 'Размер изображения не должен превышать 10 МБ.',
         ];
     }
 }

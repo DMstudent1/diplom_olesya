@@ -90,6 +90,7 @@ const fetchProducts = async () => {
   error.value = null
   
   try {
+    
     const response = await axios.get(`/api/categories/${props.categoryId}/products`)
     console.log(response)
     products.value = response.data.products

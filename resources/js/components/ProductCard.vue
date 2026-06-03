@@ -1,9 +1,22 @@
 <template>
   <v-card class="product-card" elevation="2" rounded="lg">
-    <v-img height="200" cover class="bg-grey-lighten-3" :src="fakeImage">
+    <v-img 
+      height="200" 
+      cover 
+      class="bg-grey-lighten-3" 
+      :src="productImage"
+      :lazy-src="productThumb"
+    >
       <template v-slot:placeholder>
         <div class="d-flex align-center justify-center fill-height">
           <v-icon size="48" color="grey-lighten-1">mdi-leaf</v-icon>
+        </div>
+      </template>
+      
+      <!-- Опционально: показываем количество в наличии на изображении -->
+      <template v-slot:error>
+        <div class="d-flex align-center justify-center fill-height">
+          <v-icon size="48" color="grey-lighten-1">mdi-image-off</v-icon>
         </div>
       </template>
     </v-img>
@@ -64,6 +77,42 @@ const props = defineProps({
 const emit = defineEmits(['add-to-cart', 'remove-from-cart'])
 const loading = ref(false)
 
+// === НОВЫЕ КОМПЬЮТЕД СВОЙСТВА ДЛЯ ИЗОБРАЖЕНИЙ ===
+
+// Альтернативный вариант, если media это объект
+const productImage = computed(() => {
+  // Если media массив
+  if (Array.isArray(props.product.media) && props.product.media.length > 0) {
+    return props.product.media[0].original_url
+  }
+  // Если media объект
+  if (props.product.media && props.product.media.original_url) {
+    return props.product.media.original_url
+  }
+  return getPlaceholderImage()
+})
+
+// Получаем миниатюру (для lazy loading)
+const productThumb = computed(() => {
+  if (props.product.media && props.product.media.length > 0) {
+    // Если есть thumb, используем его, иначе original
+    return props.product.media[0].thumb_url || props.product.media[0].original_url
+  }
+  return getPlaceholderImage()
+})
+
+// Функция для получения изображения-заглушки на основе категории или ID
+const getPlaceholderImage = () => {
+  const images = [
+    'https://picsum.photos/id/104/300/200', // цветок
+    'https://picsum.photos/id/106/300/200', // дерево
+    'https://picsum.photos/id/10/300/200',  // лес
+    'https://picsum.photos/id/13/300/200',  // лист
+    'https://picsum.photos/id/15/300/200',  // природа
+  ]
+  return images[props.product.id % images.length]
+}
+
 // Проверяем, есть ли товар в корзине
 const isInCart = computed(() => {
   if (!cartStore.cart?.items) return false
@@ -94,18 +143,6 @@ const getButtonText = () => {
   return 'В корзину'
 }
 
-// Фейковое фото на основе ID товара (для разнообразия)
-const fakeImage = computed(() => {
-  const images = [
-    'https://picsum.photos/id/104/300/200', // цветок
-    'https://picsum.photos/id/106/300/200', // дерево
-    'https://picsum.photos/id/10/300/200',  // лес
-    'https://picsum.photos/id/13/300/200',  // лист
-    'https://picsum.photos/id/15/300/200',  // природа
-  ]
-  return images[props.product.id % images.length]
-})
-
 const formatPrice = (price) => {
   return new Intl.NumberFormat('ru-RU').format(price)
 }
@@ -134,16 +171,8 @@ const addToCart = async () => {
     
     emit('add-to-cart', props.product)
     
-    // Можно показать уведомление об успехе
-    // snackbar.value = { show: true, text: 'Товар добавлен в корзину', color: 'success' }
-    
   } catch (error) {
     console.error('Ошибка добавления в корзину:', error)
-    // snackbar.value = {
-    //   show: true,
-    //   text: error.response?.data?.message || 'Ошибка добавления в корзину',
-    //   color: 'error'
-    // }
   } finally {
     loading.value = false
   }
@@ -152,7 +181,6 @@ const addToCart = async () => {
 // Удаление из корзины
 const removeFromCart = async () => {
   const cartItemId = getCartItemId.value
-    console.log(123123)
   
   if (!cartItemId) {
     console.error('Не найден ID товара в корзине')
@@ -162,7 +190,6 @@ const removeFromCart = async () => {
   loading.value = true
 
   try {
-    // Отправляем запрос на удаление
     const response = await axios.delete(`/api/cart/remove`, {
       data: {
         product_id: cartItemId,
@@ -175,16 +202,8 @@ const removeFromCart = async () => {
     
     emit('remove-from-cart', props.product)
     
-    // Можно показать уведомление об успехе
-    // snackbar.value = { show: true, text: 'Товар удален из корзины', color: 'info' }
-    
   } catch (error) {
     console.error('Ошибка удаления из корзины:', error)
-    // snackbar.value = {
-    //   show: true,
-    //   text: error.response?.data?.message || 'Ошибка удаления из корзины',
-    //   color: 'error'
-    // }
   } finally {
     loading.value = false
   }
