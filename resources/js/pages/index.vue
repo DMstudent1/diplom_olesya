@@ -16,7 +16,7 @@
             <v-icon color="green">mdi-truck-fast</v-icon>
           </v-col>
           <v-col>
-            <strong>Бесплатная доставка</strong> при заказе от 5000 ₽. <strong>Гарантия приживаемости 30 дней</strong> на все растения.
+            <strong>Доставка в любые регионы, гарантия приживаемости 60 днейна все растения.</strong> 
           </v-col>
         </v-row>
       </v-alert>

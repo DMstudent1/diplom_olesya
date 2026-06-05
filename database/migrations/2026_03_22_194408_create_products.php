@@ -20,7 +20,6 @@ return new class extends Migration {
             $table->decimal('price', 10, 2);
             $table->json('characteristics')->nullable();
             $table->timestamps();
-
             $table->index('category_id');
             $table->index('price');
         });

@@ -169,18 +169,16 @@
           </v-card-text>
         </v-card>
 
-        <!-- Рекомендации -->
-        <v-card rounded="lg" elevation="1" class="mt-4">
-          <v-card-text class="text-center">
-            <v-icon color="green-darken-2" size="32" class="mb-2">mdi-truck-fast</v-icon>
-            <p class="text-caption text-grey mb-0">
-              Бесплатная доставка при заказе от 5000 ₽
-            </p>
-          </v-card-text>
-        </v-card>
+     
       </v-col>
     </v-row>
-
+<OrderModal
+    v-model="showCheckoutModal"
+    :cart-items="cartStore.cart?.items || []"
+    :total-price="total"
+    @success="handleOrderSuccess"
+    @close="handleModalClose"
+  />
     <!-- Диалог подтверждения -->
     <v-dialog v-model="dialog.show" max-width="400">
       <v-card>
@@ -218,10 +216,12 @@ import { ref, computed, onMounted } from 'vue'
 import { useCartStore } from '@/stores/cart'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
+import OrderModal from '@/components/OrderModal.vue'
 
 const cartStore = useCartStore()
 const router = useRouter()
 const checkoutLoading = ref(false)
+const showCheckoutModal = ref(false)
 
 // Состояние диалога
 const dialog = ref({
@@ -373,57 +373,42 @@ const clearCart = () => {
   }
 }
 
-// Оформить заказ
-const checkout = async () => {
-  checkoutLoading.value = true
-  
+const handleOrderSuccess = async (orderData) => {
   try {
-    // Проверяем авторизацию
-    const response = await axios.post('/api/checkout')
+    // Отправка заказа на сервер
+    const response = await axios.post('/api/orders', orderData)
     
-    if (response.data.redirect) {
-      // Если нужно перенаправить на страницу оформления заказа
-      router.push(response.data.redirect)
-    } else {
-      // Если нужно показать уведомление об успехе
+    if (response.data.success) {
+      // Очищаем корзину
+      await cartStore.getCart()
+      
+      // Показываем уведомление
       snackbar.value = {
         show: true,
         text: 'Заказ успешно оформлен!',
         color: 'success'
       }
       
-      // Обновляем корзину
-      await cartStore.getCart()
-      
-      // Перенаправляем на страницу заказов через 2 секунды
+      // Перенаправляем на страницу заказов
       setTimeout(() => {
         router.push('/orders')
       }, 2000)
     }
   } catch (error) {
-    console.error('Error during checkout:', error)
-    
-    if (error.response?.status === 401) {
-      // Не авторизован - перенаправляем на регистрацию
-      snackbar.value = {
-        show: true,
-        text: 'Для оформления заказа необходимо войти в систему',
-        color: 'warning'
-      }
-      
-      setTimeout(() => {
-        router.push('/register')
-      }, 1500)
-    } else {
-      snackbar.value = {
-        show: true,
-        text: error.response?.data?.message || 'Ошибка оформления заказа',
-        color: 'error'
-      }
+    console.error('Error creating order:', error)
+    snackbar.value = {
+      show: true,
+      text: error.response?.data?.message || 'Ошибка оформления заказа',
+      color: 'error'
     }
-  } finally {
-    checkoutLoading.value = false
   }
+}
+const handleModalClose = () => {
+  showCheckoutModal.value = false
+}
+
+const checkout = () => {
+  showCheckoutModal.value = true
 }
 
 // Загрузка корзины при монтировании

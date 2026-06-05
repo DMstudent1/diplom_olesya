@@ -32,7 +32,7 @@ class User extends Authenticatable implements JWTSubject, LaratrustUser
     {
         return $this->hasOne(Cart::class);
     }
-    
+
     public function getActiveCartAttribute()
     {
         return Cart::getOrCreate($this->id);
@@ -49,6 +49,12 @@ class User extends Authenticatable implements JWTSubject, LaratrustUser
     public function getJWTIdentifier()
     {
         return $this->getKey();
+    }
+
+    public function getCartItemsCountAttribute()
+    {
+        $cart = $this->active_cart;
+        return $cart ? $cart->products()->sum('carts_products.quantity') : 0;
     }
 
     public function getJWTCustomClaims()

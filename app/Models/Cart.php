@@ -20,4 +20,9 @@ class Cart extends Model
         return $this->belongsToMany(Product::class, 'carts_products')
             ->withPivot('quantity', 'id');
     }
+
+    public static function getOrCreate($userId)
+    {
+        return static::firstOrCreate(['user_id' => $userId]);
+    }
 }

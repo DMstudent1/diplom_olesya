@@ -8,6 +8,7 @@ import Categories from '@pages/categories.vue';
 import Products from '@pages/products.vue';
 import Login from '@pages/login.vue';
 import ForgotPassword from '@pages/forgotPassword.vue';
+import ProductCategories from '@pages/productCategories.vue';
 
 const routes = [
     {
@@ -103,6 +104,18 @@ const routes = [
                 name: 'forgot-password',
                 component: ForgotPassword,
                 meta: { title: 'Сброс пароля' }
+            },
+        ]
+    },
+    {
+        path: '/product/categories',
+        component: DefaultLayout,
+        children: [
+            {
+                path: '',
+                name: 'product-categories',
+                component: ProductCategories,
+                meta: { title: 'Продукты' }
             },
         ]
     },

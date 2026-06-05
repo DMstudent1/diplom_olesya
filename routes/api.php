@@ -2,11 +2,13 @@
 
 use App\Http\Controllers\Api\AiDescriptionController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\DadataController;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\PaymentsController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/register', [AuthController::class, 'register']);
@@ -33,4 +35,8 @@ Route::group(['middleware' => 'jwt'], function () {
     Route::post('/generate-description', [AiDescriptionController::class, 'generate']);
     Route::post('category/get-datatable', [CategoryController::Class, 'getDataTable']);
     Route::post('products/get-datatable', [ProductController::Class, 'getDataTable']);
+
+    Route::get('order/delivery-points', [OrderController::class, 'getDeliveryPoints']);
+    Route::post('order/calculator', [OrderController::class, 'calculator']);
+    Route::post('payments', [PaymentsController::class, 'create']);
 });
