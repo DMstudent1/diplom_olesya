@@ -11,10 +11,15 @@ use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\PaymentsController;
 use Illuminate\Support\Facades\Route;
 
+Route::get('/carts', [OrderController::class, 'createPayment']);
+
+
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/dadata/suggest', [DadataController::class, 'suggest']);
+Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/categories/{category}/products', [ProductController::class, 'getCategoryProducts']);
+Route::get('/categories/{category}/products/all', [ProductController::class, 'getCategoryAllProducts']);
 Route::middleware('jwt')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::put('/me', [AuthController::class, 'update']);
@@ -38,5 +43,13 @@ Route::group(['middleware' => 'jwt'], function () {
 
     Route::get('order/delivery-points', [OrderController::class, 'getDeliveryPoints']);
     Route::post('order/calculator', [OrderController::class, 'calculator']);
+    Route::post('order/payment', [OrderController::class, 'success']);
+    Route::post('order', [OrderController::class, 'create']);
+
+    Route::get('/orders/{id}', [OrderController::class, 'getUserOrder']);
+    Route::get('/orders', [OrderController::class, 'getUserOrders']);
+    Route::get('/orders-paginated', [OrderController::class, 'getUserOrdersPaginated']);
+    Route::get('order/success', [OrderController::class, 'success']);
     Route::post('payments', [PaymentsController::class, 'create']);
 });
+

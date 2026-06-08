@@ -17,7 +17,11 @@ class PaymentsController extends Controller
     public function create(Request $request)
     {
         $amount = $request->input('amount');
-        \Log::alert($amount);
         return $this->yooKassa->create($amount);
+    }
+
+    public function success(Request $request)
+    {
+
     }
 }

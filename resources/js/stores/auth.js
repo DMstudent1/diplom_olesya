@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import api from '@services/api';
+import { useCartStore } from './cart'; // ✅ Добавьте этот импорт
 
 export const useAuthStore = defineStore('auth', () => {
     const user = ref(null);
@@ -11,7 +12,6 @@ export const useAuthStore = defineStore('auth', () => {
         isLoading.value = true;
         
         try {
-            // Cookie с токеном отправляется автоматически
             const response = await api.get('/me');
             console.log('checkAuth response:', response);
             user.value = response.data;
@@ -31,23 +31,23 @@ export const useAuthStore = defineStore('auth', () => {
         isLoading.value = true;
         
         try {
-            // Отправляем запрос на логин
             const response = await api.post('/login', credentials);
             console.log('Login response:', response);
             
-            // Сервер установил httpOnly cookie
-            // Токен автоматически сохранился в браузере
+            // ✅ После логина сразу получаем данные пользователя
+            const userResponse = await api.get('/me');
+            user.value = userResponse.data;
+            isAuthenticated.value = true;
             
-            // Получаем данные пользователя
-            const authResult = await checkAuth();
+            // ✅ Загружаем корзину
+            const cartStore = useCartStore();
+            await cartStore.getCart();
             
-            if (authResult.success) {
-                return { success: true };
-            } else {
-                return { success: false, error: 'Не удалось получить данные пользователя' };
-            }
+            return { success: true };
         } catch (error) {
             console.error('Login error:', error);
+            user.value = null;
+            isAuthenticated.value = false;
             return { 
                 success: false, 
                 error: error.response?.data?.error || error.response?.data?.message || 'Ошибка входа' 
@@ -64,17 +64,20 @@ export const useAuthStore = defineStore('auth', () => {
             const response = await api.post('/register', userData);
             console.log('Register response:', response);
             
-            // Сервер установил httpOnly cookie
+            // ✅ После регистрации сразу получаем данные пользователя
+            const userResponse = await api.get('/me');
+            user.value = userResponse.data;
+            isAuthenticated.value = true;
             
-            const authResult = await checkAuth();
+            // ✅ Загружаем корзину
+            const cartStore = useCartStore();
+            await cartStore.getCart();
             
-            if (authResult.success) {
-                return { success: true };
-            } else {
-                return { success: false, error: 'Не удалось получить данные пользователя' };
-            }
+            return { success: true };
         } catch (error) {
             console.error('Register error:', error);
+            user.value = null;
+            isAuthenticated.value = false;
             return { 
                 success: false, 
                 error: error.response?.data?.error || error.response?.data?.message || 'Ошибка регистрации' 
@@ -103,9 +106,13 @@ export const useAuthStore = defineStore('auth', () => {
         } catch (error) {
             console.error('Ошибка при выходе:', error);
         } finally {
-            // Токен удаляется на сервере и cookie очищается
+            // ✅ Очищаем данные
             user.value = null;
             isAuthenticated.value = false;
+            
+            // ✅ Очищаем корзину
+            const cartStore = useCartStore();
+            cartStore.cart = null;
         }
     };
 

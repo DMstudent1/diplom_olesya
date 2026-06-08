@@ -6,6 +6,7 @@ import Cart from '@pages/cart.vue';
 import Profile from '@pages/profile.vue';
 import Categories from '@pages/categories.vue';
 import Products from '@pages/products.vue';
+import Orders from '@pages/orders.vue';
 import Login from '@pages/login.vue';
 import ForgotPassword from '@pages/forgotPassword.vue';
 import ProductCategories from '@pages/productCategories.vue';
@@ -20,6 +21,18 @@ const routes = [
                 name: 'index',
                 component: Index,
                 meta: { title: 'Главная' }
+            },
+        ]
+    },
+    {
+        path: '/orders',
+        component: DefaultLayout,
+        children: [
+            {
+                path: '',
+                name: 'orders',
+                component: Orders,
+                meta: { title: 'Мои заказы' }
             },
         ]
     },
@@ -108,14 +121,15 @@ const routes = [
         ]
     },
     {
-        path: '/product/categories',
+        path: '/categories/:id',
         component: DefaultLayout,
+        props: true,
         children: [
             {
                 path: '',
-                name: 'product-categories',
+                name: 'category',
                 component: ProductCategories,
-                meta: { title: 'Продукты' }
+                meta: { title: 'Товары категории' }
             },
         ]
     },

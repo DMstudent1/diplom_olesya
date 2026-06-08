@@ -40,13 +40,22 @@
             >
               <template v-slot:prepend>
                 <v-avatar rounded="lg" size="80" class="me-4">
-                  <v-img :src="getProductImage(item)" cover>
-                    <template v-slot:placeholder>
-                      <div class="d-flex align-center justify-center fill-height bg-grey-lighten-3">
-                        <v-icon color="grey-lighten-1">mdi-image</v-icon>
-                      </div>
-                    </template>
-                  </v-img>
+<v-img 
+  :src="getProductImage(item)" 
+  cover
+  :lazy-src="placeholderImage"
+>
+  <template v-slot:placeholder>
+    <div class="d-flex align-center justify-center fill-height bg-grey-lighten-3">
+      <v-icon color="grey-lighten-1" size="32">mdi-image</v-icon>
+    </div>
+  </template>
+  <template v-slot:error>
+    <div class="d-flex align-center justify-center fill-height bg-grey-lighten-3">
+      <v-icon color="grey-lighten-1" size="32">mdi-image-off</v-icon>
+    </div>
+  </template>
+</v-img>
                 </v-avatar>
               </template>
 
@@ -176,7 +185,6 @@
     v-model="showCheckoutModal"
     :cart-items="cartStore.cart?.items || []"
     :total-price="total"
-    @success="handleOrderSuccess"
     @close="handleModalClose"
   />
     <!-- Диалог подтверждения -->
@@ -260,21 +268,26 @@ const total = computed(() => {
   return subtotal.value - discount.value
 })
 
-// Получить изображение товара
+// Плейсхолдер для изображения
+const placeholderImage = 'https://picsum.photos/id/104/300/200'
+
 const getProductImage = (item) => {
-  // Если есть изображение в товаре
+  // Проверяем наличие media в самом товаре
+  if (item.media && item.media.length > 0 && item.media[0].original_url) {
+    return item.media[0].original_url
+  }
+  
+  // Проверяем наличие product с media
+  if (item.product?.media && item.product.media.length > 0 && item.product.media[0].original_url) {
+    return item.product.media[0].original_url
+  }
+  
+  // Если есть прямое поле image
   if (item.image) return item.image
   if (item.product?.image) return item.product.image
   
-  // Фейковые изображения на основе ID
-  const images = [
-    'https://picsum.photos/id/104/300/200',
-    'https://picsum.photos/id/106/300/200',
-    'https://picsum.photos/id/10/300/200',
-    'https://picsum.photos/id/13/300/200',
-    'https://picsum.photos/id/15/300/200',
-  ]
-  return images[item.id % images.length]
+  // Возвращаем плейсхолдер
+  return placeholderImage
 }
 
 // Форматирование цены
@@ -373,36 +386,6 @@ const clearCart = () => {
   }
 }
 
-const handleOrderSuccess = async (orderData) => {
-  try {
-    // Отправка заказа на сервер
-    const response = await axios.post('/api/orders', orderData)
-    
-    if (response.data.success) {
-      // Очищаем корзину
-      await cartStore.getCart()
-      
-      // Показываем уведомление
-      snackbar.value = {
-        show: true,
-        text: 'Заказ успешно оформлен!',
-        color: 'success'
-      }
-      
-      // Перенаправляем на страницу заказов
-      setTimeout(() => {
-        router.push('/orders')
-      }, 2000)
-    }
-  } catch (error) {
-    console.error('Error creating order:', error)
-    snackbar.value = {
-      show: true,
-      text: error.response?.data?.message || 'Ошибка оформления заказа',
-      color: 'error'
-    }
-  }
-}
 const handleModalClose = () => {
   showCheckoutModal.value = false
 }

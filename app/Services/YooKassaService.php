@@ -14,31 +14,27 @@ class YooKassaService
     public function __construct()
     {
         $this->baseUrl = env('YOOKASSA_BASE_URL', 'https://api.yookassa.ru/v3');
-        $this->username = env('YOOKASSA_USERNAME'); // Ваш shopId
-        $this->password = env('YOOKASSA_PASSWORD'); // Ваш secret key
+        $this->username = env('YOOKASSA_USERNAME');
+        $this->password = env('YOOKASSA_PASSWORD');
     }
 
-    public function create($amount)
+    public function create($uuid, $amount)
     {
-        $idempotenceKey = Uuid::uuid4()->toString();
-        
-        $response = Http::withBasicAuth($this->username, $this->password) // Добавьте эту строку
+        $response = Http::withBasicAuth($this->username, $this->password)
             ->withHeaders([
-                'Idempotence-Key' => $idempotenceKey,
+                'Idempotence-Key' => $uuid,
                 'Content-Type' => 'application/json'
             ])
             ->post($this->baseUrl . '/payments', [
                 "amount" => [
-                    "value" => (string)$amount, // Используйте переданную сумму
+                    "value" => (string)$amount,
                     "currency" => "RUB"
                 ],
                 "confirmation" => [
-                    "type" => "embedded" // Уберите пробел в "embedded"
+                    "type" => "embedded"
                 ],
                 "capture" => true,
             ]);
-        
-        \Log::alert('YooKassa Response: ', $response->json());
         
         if ($response->failed()) {
             \Log::error('YooKassa Error: ', [
@@ -46,7 +42,12 @@ class YooKassaService
                 'body' => $response->json()
             ]);
         }
-        
+        \Log::info($response);
         return $response->json();
+    }
+    public function check($id)
+    {
+        $response = Http::withBasicAuth($this->username, $this->password)->get($this->baseUrl . "/payments/{$id}");
+        return $response->json()['status'];
     }
 }

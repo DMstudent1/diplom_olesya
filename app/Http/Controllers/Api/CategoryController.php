@@ -12,42 +12,53 @@ use Yajra\DataTables\Facades\DataTables;
 
 class CategoryController extends Controller
 {
+    public function index(Request $request)
+    {
+        $perPage = $request->get('per_page', 10);
+        
+        $categories = Category::select('id', 'name')
+            ->orderBy('id')
+            ->cursorPaginate($perPage);
+        
+        return response()->json($categories);
+    }
+
     private function query()
     {
         return Category::query()
-        ->from('categories as child')
-        ->select([
-            'child.id',
-            'child.name',
-            'child.created_at',
-            'child.updated_at',
-            'parent.name as parent_name',
-        ])
-        ->leftJoin('categories as parent', 'parent.id', '=', 'child.parent_id');
+            ->from('categories as child')
+            ->select([
+                'child.id',
+                'child.name',
+                'child.created_at',
+                'child.updated_at',
+                'parent.name as parent_name',
+            ])
+            ->leftJoin('categories as parent', 'parent.id', '=', 'child.parent_id');
     }
 
-private function applyFilters(Builder $query, Request $request): void
-{
-    if (!$request->has('search')) {
-        return;
+    private function applyFilters(Builder $query, Request $request): void
+    {
+        if (!$request->has('search')) {
+            return;
+        }
+
+        $search = $request->input('search');
+
+        if (is_array($search)) {
+            $search = $search['value'] ?? null;
+        }
+
+        if (empty($search)) {
+            return;
+        }
+
+        $query->where(function (Builder $query) use ($search) {
+            $query->where('child.name', 'LIKE', "%{$search}%")
+                ->orWhere('child.slug', 'LIKE', "%{$search}%")
+                ->orWhere('parent.name', 'LIKE', "%{$search}%");
+        });
     }
-    
-    $search = $request->input('search');
-    
-    if (is_array($search)) {
-        $search = $search['value'] ?? null;
-    }
-    
-    if (empty($search)) {
-        return;
-    }
-    
-    $query->where(function (Builder $query) use ($search) {
-        $query->where('child.name', 'LIKE', "%{$search}%")
-            ->orWhere('child.slug', 'LIKE', "%{$search}%")
-            ->orWhere('parent.name', 'LIKE', "%{$search}%");
-    });
-}
 
     public function getDataTable(Request $request)
     {
@@ -61,11 +72,7 @@ private function applyFilters(Builder $query, Request $request): void
                 $this->applyFilters($query, $request);
             })->toJson();
     }
-    
-    public function index()
-    {
-        return Category::all();
-    }
+
 
     public function show(Category $category)
     {
@@ -76,7 +83,7 @@ private function applyFilters(Builder $query, Request $request): void
     {
         Category::create($request->validated());
     }
-    
+
     public function update(Category $category, CategoryRequest $request)
     {
         $category->update($request->validated());

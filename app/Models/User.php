@@ -33,6 +33,11 @@ class User extends Authenticatable implements JWTSubject, LaratrustUser
         return $this->hasOne(Cart::class);
     }
 
+    public function orders()
+    {
+        return $this->hasOne(Order::class);
+    }
+
     public function getActiveCartAttribute()
     {
         return Cart::getOrCreate($this->id);

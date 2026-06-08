@@ -8,7 +8,6 @@ use App\Models\Cart;
 use Auth;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use Log;
 
 class CartController extends Controller
 {
@@ -24,7 +23,8 @@ class CartController extends Controller
     public function index()
     {
         $cart = $this->getOrCreateCart();
-        $products = $cart->products()->get();
+            
+        $products = $cart->products()->with('media')->get();
         $total = $products->sum(function ($product) {
             return $product->price * $product->pivot->quantity;
         });
@@ -37,6 +37,14 @@ class CartController extends Controller
                     'old_price' => $product->old_price,
                     'quantity' => $product->pivot->quantity,
                     'pivot_id' => $product->pivot->id,
+                    'media' => $product->media->map(function ($media) {
+                    return [
+                        'id' => $media->id,
+                        'original_url' => $media->original_url,
+                        'preview_url' => $media->preview_url,
+                        'file_name' => $media->file_name,
+                    ];
+                }),
                 ];
             }),
             'total' => $total,

@@ -14,6 +14,27 @@ use Yajra\DataTables\Facades\DataTables;
 
 class ProductController extends Controller
 {
+    public function getCategoryAllProducts(Category $category)
+    {
+        $products = Product::query()
+            ->select([
+                'products.id',
+                'products.name',
+                'products.price',
+                'products.old_price',
+                'products.count',
+                'products.category_id',
+            ])
+            ->with('media')
+            ->where('products.category_id', $category->id)
+            ->where('products.count', '>', 0)
+            ->orderBy('products.created_at', 'desc')
+            ->get();
+        return response()->json([
+            'category' => $category->name,
+            'products' => $products,
+        ]);
+    }
     public function getCategoryProducts(Category $category)
     {
         $products = Product::query()
@@ -50,7 +71,6 @@ class ProductController extends Controller
                 'categories.name as category',
             ])
             ->with('media')
-
             ->leftJoin('categories', 'categories.id', '=', 'products.category_id');
     }
 
@@ -109,7 +129,6 @@ class ProductController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
         }
-        DB::commit();
     }
 
     public function update(ProductRequest $request, Product $product)

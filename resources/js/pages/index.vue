@@ -82,44 +82,6 @@
       </v-row>
     </v-container>
 
-    <!-- Блок с подпиской -->
-    <v-container fluid class="bg-green-darken-3 py-8 mt-8">
-      <v-row justify="center">
-        <v-col cols="12" md="8" class="text-center">
-          <h2 class="text-h4 font-weight-bold text-white mb-2">
-            Будьте в курсе новинок
-          </h2>
-          <p class="text-white text-opacity-90 mb-4">
-            Подпишитесь на рассылку и получайте информацию о новых поступлениях и сезонных скидках
-          </p>
-          <v-card class="pa-4" elevation="0" rounded="lg">
-            <v-row>
-              <v-col cols="12" md="8">
-                <v-text-field
-                  v-model="email"
-                  label="Ваш email"
-                  variant="outlined"
-                  hide-details
-                ></v-text-field>
-              </v-col>
-              <v-col cols="12" md="4">
-                <v-btn
-                  color="green-darken-2"
-                  size="large"
-                  block
-                  @click="subscribe"
-                >
-                  Подписаться
-                </v-btn>
-              </v-col>
-            </v-row>
-            <div class="text-caption text-grey mt-2 text-center">
-              Никакого спама, только полезные новости
-            </div>
-          </v-card>
-        </v-col>
-      </v-row>
-    </v-container>
 
     <!-- Snackbar для уведомлений -->
     <v-snackbar

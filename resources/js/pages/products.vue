@@ -26,6 +26,7 @@
 
             <!-- Кастомная колонка с характеристиками (краткое отображение) -->
             <template v-slot:item.characteristics="{ item }">
+                <div :key="item.id">
                 <v-tooltip location="top" v-if="getCharacteristicsCount(item.characteristics) > 0">
                     <template v-slot:activator="{ props }">
                         <v-chip v-bind="props" size="small" color="info" variant="light">
@@ -40,6 +41,7 @@
                     </div>
                 </v-tooltip>
                 <span v-else class="text-grey">—</span>
+                </div>  
             </template>
 
             <!-- Кастомная колонка с датой создания -->
@@ -737,6 +739,7 @@ const saveProduct = async () => {
         if (editingProduct.value) {
             // Обновление - нужно использовать POST с _method PUT для FormData
             formDataToSend.append('_method', 'PUT')
+            console.log(formDataToSend)
             await axios.post(`/api/products/${editingProduct.value.id}`, formDataToSend, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
