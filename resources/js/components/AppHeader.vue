@@ -1,122 +1,120 @@
 <template>
     <v-app-bar color="green" dark elevation="2" class="px-4" height="120">
         <div class="app-bar-content">
-            <router-link to="/" class="nav-link text-white mr-6">
+            <!-- Логотип слева -->
+            <router-link to="/" class="nav-link text-white">
                 <v-img :src="logoUrl" alt="Logo" height="75" width="auto" contain class="logo-img"></v-img>
             </router-link>
 
-            <v-spacer></v-spacer>
+            <!-- Центральные навигационные ссылки (Главная, О нас, Категории) -->
+            <div class="nav-center">
+                <router-link to="/" class="nav-link text-white nav-link-large">
+                    Главная
+                </router-link>
 
-            <!-- Навигационные ссылки -->
-            <router-link to="/" class="nav-link text-white mr-6 nav-link-large">
-                Главная
-            </router-link>
+                <router-link to="/about" class="nav-link text-white nav-link-large">
+                    О нас
+                </router-link>
 
-            <router-link to="/about" class="nav-link text-white mr-6 nav-link-large">
-                О нас
-            </router-link>
+                <!-- Выпадающий список категорий -->
+                <v-menu open-on-hover offset-y :close-on-content-click="false" @update:model-value="handleMenuOpen">
+                    <template v-slot:activator="{ props }">
+                        <span v-bind="props" class="nav-link nav-link-large text-white cursor-pointer">
+                            Категории
+                        </span>
+                    </template>
+                    <v-card class="categories-menu" width="300">
+                        <v-list class="categories-list" :loading="categoriesLoading"
+                            :style="{ maxHeight: '400px', overflowY: 'auto' }">
+                            <v-list-item v-for="category in categories" :key="category.id"
+                                @click="goToCategory(category.id)" class="category-item">
+                                <v-list-item-title>{{ category.name }}</v-list-item-title>
+                            </v-list-item>
 
-            <!-- ✅ ССЫЛКА НА ЗАКАЗЫ (в основном меню) -->
-            <router-link v-if="authStore.isAuthenticated" to="/orders" class="nav-link-large nav-link text-white mr-6">
-                Заказы
-            </router-link>
+                            <!-- Загрузка -->
+                            <v-list-item v-if="categoriesLoading">
+                                <v-list-item-title class="text-center">
+                                    <v-progress-circular indeterminate size="24"></v-progress-circular>
+                                </v-list-item-title>
+                            </v-list-item>
 
-            <!-- Выпадающий список категорий -->
-            <v-menu open-on-hover offset-y :close-on-content-click="false" @update:model-value="handleMenuOpen">
-                <template v-slot:activator="{ props }">
-                    <span v-bind="props" class="nav-link nav-link-large text-white mr-6 cursor-pointer">
-                        Категории
-                    </span>
-                </template>
-                <v-card class="categories-menu" width="300">
-                    <v-list class="categories-list" :loading="categoriesLoading"
-                        :style="{ maxHeight: '400px', overflowY: 'auto' }">
-                        <v-list-item v-for="category in categories" :key="category.id"
-                            @click="goToCategory(category.id)" class="category-item">
-                            <v-list-item-title>{{ category.name }}</v-list-item-title>
-                        </v-list-item>
+                            <!-- Кнопки пагинации -->
+                            <div class="pagination-controls pa-2">
+                                <v-btn v-if="prevCursor" variant="text" size="small" @click="loadCategories(prevCursor)"
+                                    :loading="loadingMore" class="mr-2">
+                                    ← Назад
+                                </v-btn>
+                                <v-btn v-if="nextCursor" variant="text" size="small" @click="loadCategories(nextCursor)"
+                                    :loading="loadingMore">
+                                    Далее →
+                                </v-btn>
+                            </div>
+                        </v-list>
+                    </v-card>
+                </v-menu>
+            </div>
 
-                        <!-- Загрузка -->
-                        <v-list-item v-if="categoriesLoading">
-                            <v-list-item-title class="text-center">
-                                <v-progress-circular indeterminate size="24"></v-progress-circular>
-                            </v-list-item-title>
-                        </v-list-item>
+            <!-- Правая группа (корзина + пользователь) -->
+            <div class="nav-right">
+                <!-- Корзина -->
+                <v-btn to="/cart" v-if="authStore.isAuthenticated && cartStore.cart" variant="text" class="pa-2"
+                    height="auto" style="min-width: 60px; min-height: 48px;">
+                    <div class="d-flex flex-column align-center py-1">
+                        <v-badge :content="cartStore.cart.items_count" :model-value="cartStore.cart.items_count"
+                            color="green-darken-3" overlap>
+                            <v-icon size="24">mdi-cart-outline</v-icon>
+                        </v-badge>
+                    </div>
+                </v-btn>
 
-                        <!-- Кнопки пагинации -->
-                        <div class="pagination-controls pa-2">
-                            <v-btn v-if="prevCursor" variant="text" size="small" @click="loadCategories(prevCursor)"
-                                :loading="loadingMore" class="mr-2">
-                                ← Назад
-                            </v-btn>
-                            <v-btn v-if="nextCursor" variant="text" size="small" @click="loadCategories(nextCursor)"
-                                :loading="loadingMore">
-                                Далее →
-                            </v-btn>
-                        </div>
-                    </v-list>
-                </v-card>
-            </v-menu>
+                <!-- Меню пользователя -->
+                <v-menu open-on-hover offset-y :close-on-content-click="false">
+                    <template v-slot:activator="{ props }">
+                        <span v-bind="props" class="nav-link nav-link-large text-white cursor-pointer" style="cursor: pointer;">
+                            {{ authStore.isAuthenticated && authStore.user ? authStore.user.name : 'Вход и регистрация' }}
+                        </span>
+                    </template>
+                    <v-card v-if="!authStore.isAuthenticated" nav-link-large class="pa-2" width="200">
+                        <v-btn to="/login" block variant="text" class="mb-2 justify-start" prepend-icon="mdi-login">
+                            Войти
+                        </v-btn>
 
-            <!-- Корзина -->
-            <v-btn to="/cart" v-if="authStore.isAuthenticated && cartStore.cart" variant="text" class="pa-2"
-                height="auto" style="min-width: 60px; min-height: 48px;">
-                <div class="d-flex flex-column align-center py-1">
-                    <v-badge :content="cartStore.cart.items_count" :model-value="cartStore.cart.items_count"
-                        color="green-darken-3" overlap>
-                        <v-icon size="24">mdi-cart-outline</v-icon>
-                    </v-badge>
-                </div>
-            </v-btn>
+                        <v-divider class="my-1"></v-divider>
 
-            <!-- Меню пользователя -->
-            <v-menu open-on-hover offset-y :close-on-content-click="false">
-                <template v-slot:activator="{ props }">
-                    <span v-bind="props" class="nav-link nav-link-large text-white cursor-pointer" style="cursor: pointer;">
-                        {{ authStore.isAuthenticated && authStore.user ? authStore.user.name : 'Вход и регистрация' }}
-                    </span>
-                </template>
-                <v-card v-if="!authStore.isAuthenticated" nav-link-large class="pa-2" width="200">
-                    <v-btn to="/login" block variant="text" class="mb-2 justify-start" prepend-icon="mdi-login">
-                        Войти
-                    </v-btn>
+                        <v-btn to="/register" nav-link-large block variant="text" class="justify-start" prepend-icon="mdi-account-plus">
+                            Зарегистрироваться
+                        </v-btn>
+                    </v-card>
+                    <v-card v-else class="pa-2" width="200">
+                        <v-btn to="/orders" block variant="text" class="mb-2 justify-start" prepend-icon="mdi-history">
+                            Мои заказы
+                        </v-btn>
 
-                    <v-divider class="my-1"></v-divider>
+                        <v-divider class="my-1"></v-divider>
 
-                    <v-btn to="/register" nav-link-large block variant="text" class="justify-start" prepend-icon="mdi-account-plus">
-                        Зарегистрироваться
-                    </v-btn>
-                </v-card>
-                <v-card v-else class="pa-2" width="200">
-                    <!-- ✅ ССЫЛКА НА ЗАКАЗЫ (в выпадающем меню) -->
-                    <v-btn to="/orders" block variant="text" class="mb-2 justify-start" prepend-icon="mdi-history">
-                        Мои заказы
-                    </v-btn>
+                        <v-btn v-if="authStore.user && hasPermission(authStore.user.permissions, 'categories-create')"
+                            to="/categories" block variant="text" class="mb-2 justify-start"
+                            prepend-icon="mdi-folder-outline">
+                            Категории
+                        </v-btn>
+                        <v-btn v-if="authStore.user && hasPermission(authStore.user.permissions, 'products-create')"
+                            to="/products" block variant="text" class="mb-2 justify-start"
+                            prepend-icon="mdi-package-variant">
+                            Товары
+                        </v-btn>
 
-                    <v-divider class="my-1"></v-divider>
+                        <v-divider class="my-1"></v-divider>
 
-                    <v-btn v-if="authStore.user && hasPermission(authStore.user.permissions, 'categories-create')"
-                        to="/categories" block variant="text" class="mb-2 justify-start"
-                        prepend-icon="mdi-folder-outline">
-                        Категории
-                    </v-btn>
-                    <v-btn v-if="authStore.user && hasPermission(authStore.user.permissions, 'products-create')"
-                        to="/products" block variant="text" class="mb-2 justify-start"
-                        prepend-icon="mdi-package-variant">
-                        Товары
-                    </v-btn>
-
-                    <v-divider class="my-1"></v-divider>
-
-                    <v-btn to="/profile" block variant="text" class="justify-start" prepend-icon="mdi-account">
-                        Профиль
-                    </v-btn>
-                    <v-btn @click="handleLogout" block variant="text" class="mb-2 justify-start"
-                        prepend-icon="mdi-exit-to-app">
-                        Выйти
-                    </v-btn>
-                </v-card>
-            </v-menu>
+                        <v-btn to="/profile" block variant="text" class="justify-start" prepend-icon="mdi-account">
+                            Профиль
+                        </v-btn>
+                        <v-btn @click="handleLogout" block variant="text" class="mb-2 justify-start"
+                            prepend-icon="mdi-exit-to-app">
+                            Выйти
+                        </v-btn>
+                    </v-card>
+                </v-menu>
+            </div>
         </div>
     </v-app-bar>
 </template>
@@ -206,16 +204,33 @@ onMounted(() => {
     // loadCategories()
 })
 </script>
-
 <style scoped>
 /* ✅ Отступы по бокам 20% */
 .app-bar-content {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     width: 100%;
     max-width: 80%;
     margin: 0 auto;
     padding: 0 20px;
+}
+
+/* Центральная группа навигации */
+.nav-center {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+/* Правая группа */
+.nav-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
 }
 
 /* Для мобильных устройств */
@@ -224,12 +239,34 @@ onMounted(() => {
         max-width: 95%;
         padding: 0 10px;
     }
+    
+    .nav-center {
+        gap: 16px;
+        position: static;
+        transform: none;
+        margin: 0 auto;
+    }
+    
+    .nav-link-large {
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 768px) {
+    .nav-center {
+        gap: 8px;
+    }
+    
+    .nav-link-large {
+        font-size: 12px;
+    }
 }
 
 .nav-link {
     text-decoration: none;
     transition: opacity 0.3s ease;
     font-weight: 500;
+    white-space: nowrap;
 }
 
 .nav-link-large {
