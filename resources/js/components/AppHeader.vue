@@ -97,6 +97,12 @@
                             prepend-icon="mdi-folder-outline">
                             Категории
                         </v-btn>
+
+                        <v-btn v-if="authStore.user && hasPermission(authStore.user.permissions, 'categories-create')"
+                            to="/users" block variant="text" class="mb-2 justify-start"
+                            prepend-icon="mdi-account-group-outline">
+                            Пользовати
+                        </v-btn>
                         <v-btn v-if="authStore.user && hasPermission(authStore.user.permissions, 'products-create')"
                             to="/products" block variant="text" class="mb-2 justify-start"
                             prepend-icon="mdi-package-variant">

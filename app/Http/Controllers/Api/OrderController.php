@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Mail\SuccessPayment;
 use App\Models\Cart;
 use App\Models\Order;
+use App\Models\Product;
 use App\Models\User;
 use App\Services\CdekService;
 use App\Services\YooKassaService;
@@ -27,6 +28,167 @@ class OrderController extends Controller
         $this->cdek = $cdek;
         $this->yooKassa = $yooKassa;
     }
+    
+    public function getAllOrdersForDataTable(Request $request)
+    {
+        $query = Order::query()
+            ->with('user')
+            ->orderBy('created_at', 'desc');
+
+            if ($request->has('search') && $request->search) {
+            $search = $request->search;
+            if (is_array($search)) {
+                $search = $search['value'] ?? '';
+            }
+            
+            if (!empty($search)) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('uuid', 'LIKE', "%{$search}%")
+                      ->orWhereHas('user', function ($userQuery) use ($search) {
+                          $userQuery->where('name', 'LIKE', "%{$search}%")
+                                    ->orWhere('email', 'LIKE', "%{$search}%");
+                      });
+                });
+            }
+        }
+        $perPage = $request->input('length', 10);
+        $start = $request->input('start', 0);
+        $page = ($start / $perPage) + 1;
+
+        $orders = $query->paginate($perPage, ['*'], 'page', $page);
+
+        // Обновляем статусы для заказов
+        foreach ($orders as $order) {
+            $this->updateOrderStatusIfNeeded($order);
+        }
+        $data = [];
+        foreach ($orders as $order) {
+            $productIds = json_decode($order->products, true);
+            $productsCount = is_array($productIds) ? count($productIds) : 0;
+
+            $data[] = [
+                'id' => $order->id,
+                'uuid' => $order->uuid,
+                'user' => [
+                    'id' => $order->user->id ?? null,
+                    'name' => $order->user->name ?? 'Пользователь удален',
+                    'email' => $order->user->email ?? '-',
+                    'phone' => $order->user->phone ?? '-',
+                ],
+                'status' => $order->status,
+                'status_label' => $this->getStatusLabel($order->status),
+                'status_color' => $this->getStatusColor($order->status),
+                'sum' => (float) $order->sum,
+                'products_count' => $productsCount,
+                'delivery_point' => $order->delivery_point,
+                'delivery_uuid' => $order->delivery_uuid,
+                'payment_id' => $order->payment_id,
+                'created_at' => $order->created_at ? $order->created_at->format('Y-m-d H:i:s') : null,
+                'created_date' => $order->created_at ? $order->created_at->format('d.m.Y') : null,
+                'updated_at' => $order->updated_at ? $order->updated_at->format('Y-m-d H:i:s') : null,
+            ];
+        }
+
+        return response()->json([
+            'draw' => intval($request->input('draw', 1)),
+            'recordsTotal' => Order::count(),
+            'recordsFiltered' => $orders->total(),
+            'data' => $data,
+        ]);
+    }
+
+     public function getAllOrders(Request $request)
+    {
+        // Проверяем права доступа
+        $user = Auth::user();
+        if (!$user || !$user->hasRole('admin')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Доступ запрещен'
+            ], 403);
+        }
+
+        $perPage = $request->input('per_page', 15);
+        $status = $request->input('status', null);
+        $userId = $request->input('user_id', null);
+        $fromDate = $request->input('from_date', null);
+        $toDate = $request->input('to_date', null);
+
+        $query = Order::with('user')->orderBy('created_at', 'desc');
+
+        if ($fromDate) {
+            $query->whereDate('created_at', '>=', $fromDate);
+        }
+        if ($toDate) {
+            $query->whereDate('created_at', '<=', $toDate);
+        }
+
+        $orders = $query->paginate($perPage);
+
+        // Обновляем статусы
+        foreach ($orders as $order) {
+            $this->updateOrderStatusIfNeeded($order);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $orders,
+            'current_page' => $orders->currentPage(),
+            'last_page' => $orders->lastPage(),
+            'per_page' => $orders->perPage(),
+            'total' => $orders->total(),
+        ]);
+    }
+public function getOrderDetailsForAdmin($id)
+{
+    $order = Order::with('user')->findOrFail($id);
+    
+        $productIds = json_decode($order->products, true);
+
+        $products = Product::whereIn('id', $productIds)->get();
+
+    return response()->json([
+        'success' => true,
+        'order' => [
+            'id' => $order->id,
+            'uuid' => $order->uuid,
+            'user' => $order->user,
+            'products' => $products,
+            'status' => $order->status,
+            'sum' => (float) $order->sum,
+            'delivery_point' => $order->delivery_point,
+            'delivery_uuid' => $order->delivery_uuid,
+            'payment_id' => $order->payment_id,
+            'created_at' => $order->created_at?->format('Y-m-d H:i:s'),
+            'updated_at' => $order->updated_at?->format('Y-m-d H:i:s'),
+        ]
+    ]);
+}
+
+    private function getStatusLabel($status)
+    {
+        $labels = [
+            'pending' => 'Ожидает оплаты',
+            'succeeded' => 'Оплачен',
+            'canceled' => 'Отменен',
+            'processing' => 'В обработке',
+            'delivered' => 'Доставлен',
+        ];
+        return $labels[$status] ?? $status;
+    }
+
+    private function getStatusColor($status)
+    {
+        $colors = [
+            'pending' => 'warning',
+            'succeeded' => 'success',
+            'canceled' => 'error',
+            'processing' => 'info',
+            'delivered' => 'primary',
+        ];
+        return $colors[$status] ?? 'default';
+    }
+
 
     public function getCities(Request $request)
     {

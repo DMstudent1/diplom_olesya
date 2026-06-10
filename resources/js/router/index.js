@@ -14,6 +14,8 @@ import ResetPassword from '@pages/resetPassword.vue';
 import ProductCategories from '@pages/productCategories.vue';
 import About from '@pages/about.vue';
 import Product from '../pages/product.vue';
+import Users from '../pages/users.vue';
+import OrdersTable from '../pages/orderstable.vue';
 
 const routes = [
     {
@@ -25,6 +27,18 @@ const routes = [
                 name: 'index',
                 component: Index,
                 meta: { title: 'Главная' }
+            },
+        ]
+    },
+    {
+        path: '/admin/orders',
+        component: DefaultLayout,
+        children: [
+            {
+                path: '',
+                name: 'OrdersTable',
+                component: OrdersTable,
+                meta: { title: 'Заказы' }
             },
         ]
     },
@@ -73,6 +87,18 @@ const routes = [
                 name: 'cart',
                 component: Cart,
                 meta: { title: 'Корзина' }
+            },
+        ]
+    },
+    {
+        path: '/users',
+        component: DefaultLayout,
+        children: [
+            {
+                path: '',
+                name: 'users',
+                component: Users,
+                meta: { title: 'Пользователи' }
             },
         ]
     },

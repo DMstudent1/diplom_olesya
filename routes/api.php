@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AiDescriptionController;
+use App\Http\Controllers\Api\AiСonsultant;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\UserController;
@@ -12,7 +13,10 @@ use App\Http\Controllers\Api\PaymentsController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/carts', [OrderController::class, 'createPayment']);
-
+Route::prefix('assistant')->group(function () {
+    Route::post('/chat', [AiСonsultant::class, 'sendMessage']);
+    Route::post('/chat/stream', [AiСonsultant::class, 'streamMessage']);
+});
 Route::post('/forgot-password', [AuthController::class, 'sendResetLink']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 Route::post('/register', [AuthController::class, 'register']);
@@ -54,5 +58,21 @@ Route::group(['middleware' => 'jwt'], function () {
     Route::get('/orders-paginated', [OrderController::class, 'getUserOrdersPaginated']);
     Route::get('order/success', [OrderController::class, 'success']);
     Route::post('payments', [PaymentsController::class, 'create']);
+
+    Route::get('/users', [UserController::class, 'index']);
+    Route::post('/users/get-datatable', [UserController::class, 'getDataTable']);
+    Route::get('/users/roles', [UserController::class, 'getRoles']);
+    Route::post('/users', [UserController::class, 'store']);
+    Route::get('/users/{id}', [UserController::class, 'show']);
+    Route::put('/users/{id}', [UserController::class, 'update']);
+    Route::delete('/users/{id}', [UserController::class, 'destroy']);
+    Route::post('/users/{id}/reset-password', [UserController::class, 'resetPassword']);
+
+    Route::post('/admin/orders/datatable', [OrderController::class, 'getAllOrdersForDataTable']);
+    
+    Route::get('/admin/orders', [OrderController::class, 'getAllOrders']);
+    Route::get('/admin/orders/{id}', [OrderController::class, 'getOrderDetailsForAdmin']);
+    Route::put('/admin/orders/{id}/status', [OrderController::class, 'updateOrderStatus']);
+    Route::get('/admin/orders/statistics', [OrderController::class, 'getOrdersStatistics']);
 });
 
