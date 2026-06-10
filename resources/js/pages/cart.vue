@@ -252,7 +252,7 @@ const totalItems = computed(() => {
 })
 
 const subtotal = computed(() => {
-  return cartStore.cart?.items?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0
+  return cartStore.cart?.items?.reduce((sum, item) => sum + (item.old_price * item.quantity), 0) || 0
 })
 
 const discount = computed(() => {

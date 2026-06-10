@@ -6,17 +6,14 @@
     <v-container>
       <!-- Блок с преимуществами перед списком категорий -->
       <v-alert
-        color="info"
+        color="success"
         variant="tonal"
-        class="mb-6"
+        class="mb-6 text-center"
         density="compact"
       >
         <v-row align="center" >
-          <v-col cols="auto">
-            <v-icon color="green">mdi-truck-fast</v-icon>
-          </v-col>
           <v-col>
-            <strong>Доставка в любые регионы, гарантия приживаемости 60 днейна все растения.</strong> 
+            <strong>Leafstory — создаём сады, в которые хочется возвращаться</strong> 
           </v-col>
         </v-row>
       </v-alert>

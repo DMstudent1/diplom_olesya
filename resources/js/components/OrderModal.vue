@@ -40,11 +40,31 @@
         <v-card-text class="pa-6" style="min-height: 450px;">
           <!-- ЭТАП 1: Выбор пункта выдачи -->
           <div v-if="currentStep === 0">
-            <h3 class="text-h6 font-weight-bold mb-4">Выберите пункт выдачи СДЭК</h3>
+            <h3 class="text-h6 font-weight-bold mb-4">Выберите город и пункт выдачи СДЭК</h3>
 
-            <v-select v-model="selectedPickupPoint" :items="pickupPoints" item-title="location.address_full"
-              item-value="uuid" label="Пункт выдачи" variant="outlined" placeholder="Выберите пункт выдачи"
-              :loading="pickupPointsLoading" return-object class="mb-4">
+    <Autocomplete
+      v-model="selectedCity"
+      label="Город получения"
+      placeholder="Начните вводить название города"
+      :rules="[v => !!v || 'Выберите город из списка']"
+      @select="onCitySelected"
+      @clear="onCityCleared"
+      class="mb-4"
+    />
+
+    <v-select 
+      v-model="selectedPickupPoint" 
+      :items="pickupPoints" 
+      item-title="location.address_full"
+      item-value="uuid" 
+      label="Пункт выдачи" 
+      variant="outlined" 
+      placeholder="Сначала выберите город" 
+      :loading="pickupPointsLoading" 
+      :disabled="!selectedCity"
+      return-object 
+      class="mb-4"
+    >
               <template v-slot:item="{ item, props }">
                 <v-list-item v-bind="props">
                   <template v-slot:title>
@@ -59,12 +79,12 @@
             </v-select>
 
             <!-- Детальная информация о выбранном пункте -->
-            <v-card v-if="selectedPickupPoint" variant="tonal" class="mt-4" color="info">
+            <v-card v-if="selectedPickupPoint" class="mt-4" variant="tonal" color="green-lighten-1">
               <v-card-text>
                 <div class="d-flex flex-column gap-3">
                   <!-- Адрес -->
                   <div class="d-flex align-start">
-                    <v-icon class="me-2" size="small" color="info">mdi-map-marker</v-icon>
+                    <v-icon class="me-2" size="small" color="success">mdi-map-marker</v-icon>
                     <div>
                       <strong>Адрес:</strong>
                       {{ selectedPickupPoint.location?.address_full || selectedPickupPoint.location?.address }}
@@ -73,7 +93,7 @@
 
                   <!-- Ближайшее метро -->
                   <div v-if="selectedPickupPoint.nearest_metro_station" class="d-flex align-start">
-                    <v-icon class="me-2" size="small" color="info">mdi-subway</v-icon>
+                    <v-icon class="me-2" size="small" color="success">mdi-subway</v-icon>
                     <div>
                       <strong>Метро:</strong>
                       {{ selectedPickupPoint.nearest_metro_station }}
@@ -82,7 +102,7 @@
 
                   <!-- Режим работы -->
                   <div class="d-flex align-start">
-                    <v-icon class="me-2" size="small" color="info">mdi-clock-outline</v-icon>
+                    <v-icon class="me-2" size="small" color="success">mdi-clock-outline</v-icon>
                     <div>
                       <strong>Режим работы:</strong>
                       <div class="text-caption">{{ selectedPickupPoint.work_time }}</div>
@@ -91,7 +111,7 @@
 
                   <!-- Email -->
                   <div v-if="selectedPickupPoint.email" class="d-flex align-start">
-                    <v-icon class="me-2" size="small" color="info">mdi-email</v-icon>
+                    <v-icon class="me-2" size="small" color="success">mdi-email</v-icon>
                     <div>
                       <strong>Email:</strong>
                       <div class="text-caption">{{ selectedPickupPoint.email }}</div>
@@ -100,7 +120,7 @@
 
                   <!-- Кнопка открытия на карте -->
                   <v-btn v-if="selectedPickupPoint.location?.longitude && selectedPickupPoint.location?.latitude"
-                    variant="text" color="info" size="small" class="mt-2"
+                    variant="text" color="success" size="small" class="mt-2"
                     :href="`https://maps.google.com/?q=${selectedPickupPoint.location.latitude},${selectedPickupPoint.location.longitude}`"
                     target="_blank" prepend-icon="mdi-map">
                     Открыть на карте
@@ -109,8 +129,7 @@
               </v-card-text>
             </v-card>
 
-            <v-alert v-else type="info" variant="tonal" class="mt-4">
-              <v-icon start>mdi-information</v-icon>
+            <v-alert v-else type="info" color="green-lighten-1" class="mt-4">
               Пожалуйста, выберите удобный для вас пункт выдачи СДЭК
             </v-alert>
           </div>
@@ -240,8 +259,7 @@
           <div v-if="currentStep === 2">
             <h3 class="text-h6 font-weight-bold mb-4">Оплата заказа</h3>
 
-            <v-alert type="info" variant="tonal" class="mb-4">
-              <v-icon start>mdi-shield-check</v-icon>
+            <v-alert type="info" color="green-lighten-1" variant="tonal" class="mb-4">
               Оплата проходит через защищенный платежный сервис ЮKassa
             </v-alert>
 
@@ -303,6 +321,7 @@
 <script setup>
 import { ref, computed, watch, nextTick } from 'vue'
 import axios from 'axios'
+import Autocomplete from '@/components/Autocomplete.vue'
 
 const props = defineProps({
   modelValue: {
@@ -325,6 +344,7 @@ const internalVisible = computed({
   set: (val) => emit('update:modelValue', val)
 })
 
+const selectedCity = ref(null)
 const currentStep = ref(0)
 const totalSteps = 3
 const loading = ref(false)
@@ -415,6 +435,23 @@ const getProductImage = (item) => {
   return placeholderImage
 }
 
+const onCitySelected = (city) => {
+  console.log('Выбран город:', city)
+  // Сбрасываем выбранный пункт выдачи
+  selectedPickupPoint.value = null
+  pickupPoints.value = []
+  deliveryPrice.value = 0
+  
+  // Загружаем пункты для выбранного города
+  loadPickupPoints(city)
+}
+
+const onCityCleared = () => {
+  selectedPickupPoint.value = null
+  pickupPoints.value = []
+  deliveryPrice.value = 0
+}
+
 const formatPrice = (price) => {
   return new Intl.NumberFormat('ru-RU').format(Math.round(price))
 }
@@ -436,20 +473,28 @@ const formatWeight = (grams) => {
   return `${grams} г`
 }
 
-const loadPickupPoints = async () => {
+const loadPickupPoints = async (city) => {
+  if (!city || !city.code) return
+  console.log(city.code)
   pickupPointsLoading.value = true
   try {
-    const response = await axios.get('/api/order/delivery-points')
+    const response = await axios.get('/api/order/delivery-points', {
+      params: { code: city.code }
+    })
     pickupPoints.value = response.data
   } catch (error) {
-    console.error('Ошибка загрузки пунктов выдачи:', error)
+    console.error('Ошибка загрузки ПВЗ:', error)
   } finally {
     pickupPointsLoading.value = false
   }
 }
 
 const calculateDelivery = async () => {
+  console.log('1. Начало calculateDelivery')
+  console.log('2. selectedPickupPoint.value:', selectedPickupPoint.value)
+  
   if (!selectedPickupPoint.value) {
+    console.log('3. Нет выбранного пункта')
     deliveryPrice.value = 0
     paymentData.value = null
     return
@@ -458,15 +503,35 @@ const calculateDelivery = async () => {
   deliveryLoading.value = true
 
   try {
-    const response = await axios.post('/api/order/calculator', {
-      code: selectedPickupPoint.value.code,
-    })
+    // Получаем данные пункта
+    const point = selectedPickupPoint.value
+    console.log('4. point:', point)
+    
+    // Проверяем структуру point
+    console.log('5. point.location:', point.location)
+    console.log('6. point.location?.city_code:', point.location?.city_code)
+    console.log('7. point.location?.code:', point.location?.code)
+    console.log('8. point.city:', point.city)
+    
+    // Формируем данные для отправки
+    const requestData = {
+      city_code: point.location?.city_code || point.city_code,
+      pvz_code: point.code,
+      city: point.location?.city || point.city,
+    }
+    
+    console.log('9. Отправляем данные:', requestData)
+    
+    const response = await axios.post('/api/order/calculator', requestData)
+    console.log('10. Ответ получен:', response)
 
     const responseData = response.data.data || response.data
-
+    console.log('11. Данные ответа:', responseData)
+    
     if (responseData.delivery) {
       deliveryData.value = responseData.delivery
       deliveryPrice.value = responseData.delivery.delivery_sum || 0
+      console.log('12. Цена доставки:', deliveryPrice.value)
     }
 
     if (responseData.payment) {
@@ -481,18 +546,20 @@ const calculateDelivery = async () => {
           status: responseData.payment.status
         }
         sessionStorage.setItem('payment_info', JSON.stringify(paymentData.value))
-        console.log('Payment data saved:', paymentData.value)
+        console.log('13. Payment data saved:', paymentData.value)
       } else {
-        console.warn('No confirmation_token in payment data')
+        console.warn('14. No confirmation_token in payment data')
       }
     }
 
   } catch (error) {
-    console.error('Ошибка расчета доставки:', error)
+    console.error('15. Ошибка расчета доставки:', error)
+    console.error('16. Детали ошибки:', error.response?.data)
     deliveryPrice.value = 350
     paymentData.value = null
   } finally {
     deliveryLoading.value = false
+    console.log('17. Завершение calculateDelivery')
   }
 }
 

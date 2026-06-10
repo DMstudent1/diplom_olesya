@@ -7,58 +7,66 @@
                 </v-card-title>
                 
                 <v-card-text>
+                    <div class="text-center mb-4 text-medium-emphasis">
+                        Введите email, указанный при регистрации, и мы отправим ссылку для восстановления пароля
+                    </div>
+                    
                     <v-form ref="formRef" v-model="valid">
-                        <!-- Email -->
                         <v-text-field
-                            v-model="form.email"
+                            v-model="email"
                             label="Email"
                             type="email"
                             variant="outlined"
                             :rules="emailRules"
                             prepend-inner-icon="mdi-email"
                             class="mb-3"
-                            placeholder="example@mail.com"
+                            :disabled="loading"
                         ></v-text-field>
                         
-                        <!-- Кнопка отправки -->
                         <v-btn
                             color="green"
                             size="large"
                             block
                             :disabled="!valid || loading"
-                            @click="submitForm"
                             :loading="loading"
+                            @click="submitForm"
                         >
-                            Отправить инструкцию
+                            Отправить ссылку
                         </v-btn>
                         
-                        <!-- Сообщение об успешной отправке -->
                         <v-alert
-                            v-if="success"
-                            type="success"
-                            variant="tonal"
-                            class="mt-4"
-                        >
-                            Инструкция по восстановлению пароля отправлена на ваш email
-                        </v-alert>
-                        
-                        <!-- Сообщение об ошибке -->
-                        <v-alert
-                            v-if="error"
+                            v-if="errorMessage"
                             type="error"
                             variant="tonal"
                             class="mt-4"
+                            closable
+                            @click:close="errorMessage = ''"
                         >
                             {{ errorMessage }}
+                        </v-alert>
+                        
+                        <v-alert
+                            v-if="successMessage"
+                            type="success"
+                            variant="tonal"
+                            class="mt-4"
+                            closable
+                            @click:close="successMessage = ''"
+                        >
+                            <div>
+                                <strong>✓ {{ successMessage }}</strong>
+                                <br>
+                                <span class="text-caption">Проверьте почту и перейдите по ссылке для восстановления пароля.</span>
+                            </div>
                         </v-alert>
                     </v-form>
                 </v-card-text>
                 
-                <!-- Вернуться ко входу -->
                 <v-card-actions class="justify-center">
+                    <span class="text-caption">Вспомнили пароль?</span>
                     <router-link to="/login" class="text-decoration-none">
-                        <v-btn variant="text" color="green" size="default" prepend-icon="mdi-arrow-left">
-                            Вернуться ко входу
+                        <v-btn variant="text" color="green" size="default">
+                            Войти
                         </v-btn>
                     </router-link>
                 </v-card-actions>
@@ -70,74 +78,84 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import api from '@/services/api'
 
 const router = useRouter()
 
-// Данные формы
-const form = ref({
-    email: ''
-})
-
+const email = ref('')
 const formRef = ref(null)
 const valid = ref(false)
 const loading = ref(false)
-const success = ref(false)
-const error = ref(false)
 const errorMessage = ref('')
+const successMessage = ref('')
 
-// Валидация в реальном времени
-watch(form, () => {
-    if (formRef.value) {
-        formRef.value.validate()
-    }
-}, { deep: true })
-
-// Правила валидации для email
+// Валидация email
 const emailRules = [
     v => !!v || 'Введите email',
     v => /.+@.+\..+/.test(v) || 'Введите корректный email'
 ]
+
+// Автовалидация при изменении email
+watch(email, () => {
+    if (formRef.value) {
+        formRef.value.validate()
+    }
+})
 
 // Отправка формы
 const submitForm = async () => {
     if (!valid.value) return
     
     loading.value = true
-    success.value = false
-    error.value = false
+    errorMessage.value = ''
+    successMessage.value = ''
     
     try {
-        // Подготовка данных
-        const resetData = {
-            email: form.value.email
+        const response = await api.post('/forgot-password', {
+            email: email.value
+        })
+        
+        console.log('Ссылка отправлена:', response.data)
+        
+        if (response.data.success) {
+            successMessage.value = response.data.message || 'Ссылка для восстановления пароля отправлена на вашу почту!'
+            email.value = '' // Очищаем поле
+            formRef.value?.resetValidation() // Сбрасываем валидацию
+        } else {
+            errorMessage.value = response.data.message || 'Произошла ошибка'
         }
         
-        console.log('Отправка запроса на восстановление:', resetData)
+    } catch (error) {
+        console.error('Ошибка при отправке ссылки:', error)
         
-        // Здесь будет реальный запрос к API
-        // const response = await api.post('/forgot-password', resetData)
-        
-        // Имитация задержки
-        await new Promise(resolve => setTimeout(resolve, 1500))
-        
-        // Успешная отправка
-        success.value = true
-        form.value.email = '' // Очищаем поле
-        
-        // Автоматически скрываем сообщение через 5 секунд
-        setTimeout(() => {
-            success.value = false
-        }, 5000)
-        
-    } catch (err) {
-        console.error('Ошибка восстановления:', err)
-        error.value = true
-        errorMessage.value = err.response?.data?.message || 'Ошибка отправки. Попробуйте позже.'
-        
-        // Автоматически скрываем сообщение об ошибке через 5 секунд
-        setTimeout(() => {
-            error.value = false
-        }, 5000)
+        if (error.response) {
+            const status = error.response.status
+            const data = error.response.data
+            
+            // Обработка ошибок валидации
+            if (status === 422 && data.errors) {
+                const errorMessages = Object.values(data.errors).flat()
+                errorMessage.value = errorMessages.join(', ')
+            } 
+            // Ошибка 429 (слишком много попыток)
+            else if (status === 429 && data.errors) {
+                errorMessage.value = data.errors.email?.[0] || 'Слишком много попыток. Попробуйте позже.'
+            }
+            // Ошибка 500 (серверная ошибка)
+            else if (status === 500) {
+                errorMessage.value = 'Ошибка сервера. Попробуйте позже.'
+            }
+            // Другие ошибки
+            else if (data.message) {
+                errorMessage.value = data.message
+            } else {
+                errorMessage.value = 'Произошла ошибка при отправке ссылки. Попробуйте позже.'
+            }
+        } else if (error.request) {
+            errorMessage.value = 'Ошибка сети. Проверьте подключение к интернету.'
+        } else {
+            errorMessage.value = 'Произошла ошибка. Попробуйте позже.'
+        }
     } finally {
         loading.value = false
     }

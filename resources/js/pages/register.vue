@@ -37,19 +37,7 @@
                             prepend-inner-icon="mdi-email"
                             class="mb-3"
                         ></v-text-field>
-                        
-                        <!-- ✅ DaData для адреса (вместо select) -->
-                        <DadataSuggest
-                            v-model="form.address"
-                            label="Адрес"
-                            placeholder="Введите город или полный адрес..."
-                            icon="mdi-map-marker"
-                            type="address"
-                            variant="outlined"
-                            :rules="[v => !!v || 'Введите адрес']"
-                            class="mb-3"
-                            @select="onAddressSelect"
-                        />
+
                         
                         <v-text-field
                             v-model="form.password"
@@ -149,7 +137,6 @@ const form = ref({
     name: '',
     phone: '',
     email: '',
-    address: '',
     password: '',
     passwordConfirmation: ''
 })
@@ -167,17 +154,6 @@ watch(form, () => {
         formRef.value.validate()
     }
 }, { deep: true })
-
-// Обработчик выбора адреса из DaData
-const onAddressSelect = (suggestion) => {
-    if (suggestion?.data) {
-        console.log('Выбран адрес:', suggestion.value)
-        console.log('Детали:', suggestion.data)
-        
-        // Можно сохранить город отдельно, если нужно
-        // form.value.city = suggestion.data.city || suggestion.data.settlement || ''
-    }
-}
 
 const formatPhone = (event) => {
     let value = event.target.value.replace(/\D/g, '')
@@ -278,7 +254,6 @@ const submitForm = async () => {
     
     const requestData = {
         name: form.value.name,
-        address: form.value.address,  // ← полный адрес от DaData
         email: form.value.email,
         password: form.value.password,
         phone: cleanPhone

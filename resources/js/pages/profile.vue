@@ -1,5 +1,5 @@
 <template>
-    <div>
+    <div  class="mt-6">
         <v-row>
             <v-col cols="12" md="8" offset-md="2">
                 <v-card>
@@ -66,20 +66,6 @@
                             <v-list-item>
                                 <template v-slot:prepend>
                                     <v-avatar color="green-lighten-4">
-                                        <v-icon color="green-darken-2" icon="mdi-map-marker"></v-icon>
-                                    </v-avatar>
-                                </template>
-                                <v-list-item-title class="text-caption text-grey">Адрес</v-list-item-title>
-                                <v-list-item-subtitle class="text-body-1 font-weight-medium">
-                                    {{ authStore.user?.address || 'Не указан' }}
-                                </v-list-item-subtitle>
-                            </v-list-item>
-
-                            <v-divider inset></v-divider>
-
-                            <v-list-item>
-                                <template v-slot:prepend>
-                                    <v-avatar color="green-lighten-4">
                                         <v-icon color="green-darken-2" icon="mdi-calendar"></v-icon>
                                     </v-avatar>
                                 </template>
@@ -89,68 +75,6 @@
                                 </v-list-item-subtitle>
                             </v-list-item>
                         </v-list>
-
-                        <!-- Блок Способы оплаты -->
-                        <v-divider></v-divider>
-                        
-                        <div class="payment-methods-section">
-                            <div class="d-flex justify-space-between align-center pa-4">
-                                <v-card-title class="text-h1">Способы оплаты</v-card-title>
-                                <v-btn
-                                    color="green"
-                                    variant="tonal"
-                                    prepend-icon="mdi-plus"
-                                    @click="openAddPaymentDialog"
-                                >
-                                    Добавить карту
-                                </v-btn>
-                            </div>
-                            
-                            <v-list class="payment-methods-list">
-                                <v-list-item
-                                    v-for="(card, index) in paymentMethods"
-                                    :key="index"
-                                >
-                                    <template v-slot:prepend>
-                                        <div 
-                                            class="card-preview-icon"
-                                            :style="{ backgroundColor: getBankColor(card.bankCode) }"
-                                        >
-                                            <v-icon color="white" size="24">
-                                                {{ getCardTypeIcon(card.cardType) }}
-                                            </v-icon>
-                                        </div>
-                                    </template>
-                                    
-                                    <v-list-item-title>
-                                        {{ card.bankName || 'Банк не определен' }}
-                                    </v-list-item-title>
-                                    
-                                    <v-list-item-subtitle>
-                                        {{ maskCardNumber(card.number) }}
-                                        <v-chip size="x-small" class="ml-2">
-                                            {{ card.cardTypeName || 'Карта' }}
-                                        </v-chip>
-                                    </v-list-item-subtitle>
-                                    
-                                    <template v-slot:append>
-                                        <v-btn
-                                            icon="mdi-delete"
-                                            variant="text"
-                                            color="red"
-                                            size="small"
-                                            @click="deletePaymentMethod(index)"
-                                        />
-                                    </template>
-                                </v-list-item>
-                                
-                                <v-list-item v-if="paymentMethods.length === 0">
-                                    <v-list-item-title class="text-center text-grey">
-                                        Нет добавленных способов оплаты
-                                    </v-list-item-title>
-                                </v-list-item>
-                            </v-list>
-                        </div>
                     </v-card-text>
 
                     <!-- Режим редактирования -->
@@ -183,18 +107,6 @@
                                 prepend-inner-icon="mdi-phone"
                                 placeholder="+7 999 123-45-67"
                             />
-
-                            <DadataSuggest
-                                v-model="editForm.address"
-                                label="Адрес"
-                                placeholder="Введите адрес (город, улицу, дом)..."
-                                icon="mdi-map-marker"
-                                type="address"
-                                variant="outlined"
-                                @select="onAddressSelect"
-                            />
-
-                            <v-divider class="my-4" />
 
                             <div class="text-h6 mb-4">Смена пароля</div>
 
@@ -239,111 +151,6 @@
                     </v-card-actions>
                 </v-card>
 
-                <!-- Диалог добавления карты -->
-                <v-dialog v-model="showPaymentDialog" max-width="550">
-                    <v-card>
-                        <v-card-title class="text-h5">Добавить банковскую карту</v-card-title>
-                        <v-card-text>
-                            <!-- Превью карты -->
-                            <div 
-                                class="card-preview mb-4"
-                                :style="{ background: cardPreview.backgroundGradient }"
-                                v-if="cardPreview.show"
-                            >
-                                <div class="card-preview-content">
-                                    <div class="card-brand">
-                                        <div class="payment-system-icon">
-                                            {{ getPaymentSystemIcon(cardPreview.paymentSystem) }}
-                                        </div>
-                                    </div>
-                                    <div class="card-number">
-                                        {{ cardPreview.formattedNumber || '●●●● ●●●● ●●●● ●●●●' }}
-                                    </div>
-                                    <div class="card-footer">
-                                        <div class="card-holder">
-                                            <div class="label">Card Holder</div>
-                                            <div class="value">
-                                                {{ newCard.holderName.toUpperCase() || 'YOUR NAME' }}
-                                            </div>
-                                        </div>
-                                        <div class="card-expiry">
-                                            <div class="label">Expires</div>
-                                            <div class="value">
-                                                {{ newCard.expiry || 'MM/YY' }}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="card-bank">
-                                        <span>{{ cardPreview.bankName || '' }}</span>
-                                        <span class="card-type-badge" v-if="cardPreview.cardType">
-                                            {{ cardPreview.cardType }}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <v-form ref="paymentFormRef" v-model="paymentFormValid">
-                                <v-text-field
-                                    v-model="newCard.number"
-                                    label="Номер карты"
-                                    variant="outlined"
-                                    placeholder="0000 0000 0000 0000"
-                                    prepend-inner-icon="mdi-credit-card"
-                                    :rules="cardNumberRules"
-                                    @update:model-value="onCardNumberChange"
-                                />
-                                
-                                <v-row>
-                                    <v-col cols="6">
-                                        <v-text-field
-                                            v-model="newCard.expiry"
-                                            label="Срок действия"
-                                            variant="outlined"
-                                            placeholder="MM/YY"
-                                            prepend-inner-icon="mdi-calendar"
-                                            :rules="expiryRules"
-                                            @update:model-value="formatExpiry"
-                                        />
-                                    </v-col>
-                                    <v-col cols="6">
-                                        <v-text-field
-                                            v-model="newCard.cvv"
-                                            label="CVV"
-                                            variant="outlined"
-                                            placeholder="123"
-                                            type="password"
-                                            prepend-inner-icon="mdi-lock"
-                                            :rules="cvvRules"
-                                            maxlength="4"
-                                        />
-                                    </v-col>
-                                </v-row>
-                                
-                                <v-text-field
-                                    v-model="newCard.holderName"
-                                    label="Держатель карты"
-                                    variant="outlined"
-                                    placeholder="IVAN IVANOV"
-                                    prepend-inner-icon="mdi-account"
-                                    :rules="[v => !!v || 'Введите имя держателя']"
-                                    @update:model-value="updateCardPreview"
-                                />
-                            </v-form>
-                        </v-card-text>
-                        <v-card-actions>
-                            <v-spacer />
-                            <v-btn variant="text" @click="closePaymentDialog">Отмена</v-btn>
-                            <v-btn
-                                color="green"
-                                :disabled="!paymentFormValid"
-                                @click="addPaymentMethod"
-                            >
-                                Добавить
-                            </v-btn>
-                        </v-card-actions>
-                    </v-card>
-                </v-dialog>
-
                 <!-- Snackbar для уведомлений -->
                 <v-snackbar
                     v-model="snackbar.show"
@@ -380,7 +187,6 @@ const editForm = reactive({
     name: '',
     email: '',
     phone: '',
-    address: '',
     password: '',
     password_confirmation: ''
 })
@@ -665,15 +471,9 @@ const initForm = () => {
         editForm.name = authStore.user.name || ''
         editForm.email = authStore.user.email || ''
         editForm.phone = authStore.user.phone || ''
-        editForm.address = authStore.user.address || ''
     }
 }
 
-const onAddressSelect = (suggestion) => {
-    if (suggestion?.data) {
-        console.log('Выбран адрес:', suggestion.value)
-    }
-}
 
 const startEdit = () => {
     initForm()
@@ -699,7 +499,6 @@ const saveProfile = async () => {
     if (editForm.name !== authStore.user?.name) updateData.name = editForm.name
     if (editForm.email !== authStore.user?.email) updateData.email = editForm.email
     if (editForm.phone !== authStore.user?.phone) updateData.phone = editForm.phone
-    if (editForm.address !== authStore.user?.address) updateData.address = editForm.address
     if (editForm.password) updateData.password = editForm.password
 
     if (Object.keys(updateData).length === 0) {

@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import DefaultLayout from '@layouts/default.vue';
+import AboutLayout from '@layouts/about.vue';
 import Index from '@pages/index.vue';
 import Register from '@pages/register.vue';
 import Cart from '@pages/cart.vue';
@@ -9,7 +10,10 @@ import Products from '@pages/products.vue';
 import Orders from '@pages/orders.vue';
 import Login from '@pages/login.vue';
 import ForgotPassword from '@pages/forgotPassword.vue';
+import ResetPassword from '@pages/resetPassword.vue';
 import ProductCategories from '@pages/productCategories.vue';
+import About from '@pages/about.vue';
+import Product from '../pages/product.vue';
 
 const routes = [
     {
@@ -33,6 +37,18 @@ const routes = [
                 name: 'orders',
                 component: Orders,
                 meta: { title: 'Мои заказы' }
+            },
+        ]
+    },
+    {
+        path: '/about',
+        component: AboutLayout,
+        children: [
+            {
+                path: '',
+                name: 'about',
+                component: About,
+                meta: { title: 'О нас' }
             },
         ]
     },
@@ -80,7 +96,7 @@ const routes = [
                 path: '',
                 name: 'products',
                 component: Products,
-                meta: { permission: 'categories-create', title: 'Продукты' }
+                meta: { title: 'Продукты' }
             },
         ]
     },
@@ -130,6 +146,31 @@ const routes = [
                 name: 'category',
                 component: ProductCategories,
                 meta: { title: 'Товары категории' }
+            },
+        ]
+    },
+    {
+        path: '/product/:id',
+        component: DefaultLayout,
+        props: true,
+        children: [
+            {
+                path: '',
+                name: 'product',
+                component: Product,
+                meta: { title: 'Продукт' }
+            },
+        ]
+    },
+        {
+        path: '/reset-password',
+        component: DefaultLayout,
+        children: [
+            {
+                path: '',
+                name: 'reset-password',
+                component: ResetPassword,
+                meta: { title: 'Изменение пароля' }
             },
         ]
     },

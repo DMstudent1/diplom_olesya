@@ -13,12 +13,14 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/carts', [OrderController::class, 'createPayment']);
 
-
+Route::post('/forgot-password', [AuthController::class, 'sendResetLink']);
+Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/dadata/suggest', [DadataController::class, 'suggest']);
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/categories/{category}/products', [ProductController::class, 'getCategoryProducts']);
+Route::get('/products/{product}', [ProductController::class, 'show']);
 Route::get('/categories/{category}/products/all', [ProductController::class, 'getCategoryAllProducts']);
 Route::middleware('jwt')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
@@ -41,6 +43,7 @@ Route::group(['middleware' => 'jwt'], function () {
     Route::post('category/get-datatable', [CategoryController::Class, 'getDataTable']);
     Route::post('products/get-datatable', [ProductController::Class, 'getDataTable']);
 
+    Route::get('order/cities', [OrderController::class, 'getCities']);
     Route::get('order/delivery-points', [OrderController::class, 'getDeliveryPoints']);
     Route::post('order/calculator', [OrderController::class, 'calculator']);
     Route::post('order/payment', [OrderController::class, 'success']);

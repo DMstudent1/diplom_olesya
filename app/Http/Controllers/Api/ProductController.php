@@ -35,6 +35,7 @@ class ProductController extends Controller
             'products' => $products,
         ]);
     }
+
     public function getCategoryProducts(Category $category)
     {
         $products = Product::query()

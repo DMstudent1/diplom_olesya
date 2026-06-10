@@ -1,4 +1,8 @@
 <template>
+    <a 
+    class="product-link"
+    @click="handleCardClick"
+  >
   <v-card class="product-card" elevation="2" rounded="lg">
     <v-img 
       height="200" 
@@ -48,22 +52,24 @@
         :variant="isInCart ? 'outlined' : 'flat'" 
         rounded="lg" 
         :loading="loading"
-        @click="handleCartAction"
+        @click.stop="handleCartAction"
       >
         <v-icon start>{{ isInCart ? 'mdi-check' : 'mdi-cart-plus' }}</v-icon>
         {{ getButtonText() }}
       </v-btn>
     </v-card-actions>
   </v-card>
+  </a>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue'
 import axios from 'axios'
 import { useCartStore } from '@/stores/cart'
+import { useRouter } from 'vue-router'
 
 const cartStore = useCartStore();
-
+const router = useRouter();
 const props = defineProps({
   product: {
     type: Object,
@@ -77,8 +83,14 @@ const props = defineProps({
 const emit = defineEmits(['add-to-cart', 'remove-from-cart'])
 const loading = ref(false)
 
-// === НОВЫЕ КОМПЬЮТЕД СВОЙСТВА ДЛЯ ИЗОБРАЖЕНИЙ ===
-
+const handleCardClick = (e) => {
+  // Проверяем, не был ли клик по кнопке или внутри нее
+  if (e.target.closest('.v-btn') || e.target.closest('button')) {
+    return; // Не редиректим
+  }
+  
+  router.push(`/product/${props.product.id}`); // ✅ Без перезагрузки
+}
 // Альтернативный вариант, если media это объект
 const productImage = computed(() => {
   // Если media массив
@@ -211,6 +223,14 @@ const removeFromCart = async () => {
 </script>
 
 <style scoped>
+
+.product-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  cursor: pointer;
+}
+
 .product-card {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }

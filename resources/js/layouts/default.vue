@@ -1,10 +1,8 @@
 <template>
     <v-app>
         <AppHeader />
-        <v-main>
-            <v-container fluid>
+        <v-main >
                 <router-view />
-            </v-container>
         </v-main>
         <AppFooter />
     </v-app>

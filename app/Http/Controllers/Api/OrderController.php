@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Mail\SuccessPayment;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\User;
@@ -12,6 +13,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
+use Mail;
 use Ramsey\Uuid\Uuid;
 use Yajra\DataTables\DataTables;
 
@@ -26,73 +28,79 @@ class OrderController extends Controller
         $this->yooKassa = $yooKassa;
     }
 
+    public function getCities(Request $request)
+    {
+        $city = $request->input('city');
+        return $this->cdek->getCities($city);
+    }
+
     public function getUserOrdersPaginated(Request $request)
-{
-    $user = Auth::user();
-    
-    if (!$user) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Пользователь не авторизован'
-        ], 401);
-    }
-    
-    $perPage = $request->input('per_page', 10);
-    $status = $request->input('status', null);
-    
-    // Строим запрос
-    $query = $user->orders();
-    
-    // Фильтр по статусу
-    if ($status && in_array($status, ['pending', 'succeeded', 'canceled', 'processing', 'delivered'])) {
-        $query->where('status', $status);
-    }
-    
-    // Пагинация
-    $orders = $query->orderBy('created_at', 'desc')->paginate($perPage);
-    
-    // Обновляем статусы
-    foreach ($orders as $order) {
-        $this->updateOrderStatusIfNeeded($order);
-    }
-    
-    // Формируем ответ
-    $ordersData = [];
-    foreach ($orders as $order) {
-        $productIds = json_decode($order->products, true);
-        $productsCount = $productIds ? count($productIds) : 0;
-        
-        // Получаем только первое изображение для превью
-        $previewImage = null;
-        if ($productIds) {
-            $firstProduct = \App\Models\Product::where('id', $productIds[0])->with('media')->first();
-            if ($firstProduct && $firstProduct->media && $firstProduct->media->first()) {
-                $previewImage = $firstProduct->media->first()->original_url;
-            }
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Пользователь не авторизован'
+            ], 401);
         }
-        
-        $ordersData[] = [
-            'id' => $order->id,
-            'uuid' => $order->uuid,
-            'status' => $order->status,
-            'sum' => (float) $order->sum,
-            'products_count' => $productsCount,
-            'preview_image' => $previewImage,
-            'delivery_uuid' => $order->delivery_uuid,
-            'created_at' => $order->created_at->format('Y-m-d H:i:s'),
-            'formatted_date' => $order->created_at->format('d.m.Y'),
-        ];
+
+        $perPage = $request->input('per_page', 10);
+        $status = $request->input('status', null);
+
+        // Строим запрос
+        $query = $user->orders();
+
+        // Фильтр по статусу
+        if ($status && in_array($status, ['pending', 'succeeded', 'canceled', 'processing', 'delivered'])) {
+            $query->where('status', $status);
+        }
+
+        // Пагинация
+        $orders = $query->orderBy('created_at', 'desc')->paginate($perPage);
+
+        // Обновляем статусы
+        foreach ($orders as $order) {
+            $this->updateOrderStatusIfNeeded($order);
+        }
+
+        // Формируем ответ
+        $ordersData = [];
+        foreach ($orders as $order) {
+            $productIds = json_decode($order->products, true);
+            $productsCount = $productIds ? count($productIds) : 0;
+
+            // Получаем только первое изображение для превью
+            $previewImage = null;
+            if ($productIds) {
+                $firstProduct = \App\Models\Product::where('id', $productIds[0])->with('media')->first();
+                if ($firstProduct && $firstProduct->media && $firstProduct->media->first()) {
+                    $previewImage = $firstProduct->media->first()->original_url;
+                }
+            }
+
+            $ordersData[] = [
+                'id' => $order->id,
+                'uuid' => $order->uuid,
+                'status' => $order->status,
+                'sum' => (float) $order->sum,
+                'products_count' => $productsCount,
+                'preview_image' => $previewImage,
+                'delivery_uuid' => $order->delivery_uuid,
+                'created_at' => $order->created_at->format('Y-m-d H:i:s'),
+                'formatted_date' => $order->created_at->format('d.m.Y'),
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $ordersData,
+            'current_page' => $orders->currentPage(),
+            'last_page' => $orders->lastPage(),
+            'per_page' => $orders->perPage(),
+            'total' => $orders->total(),
+        ]);
     }
-    
-    return response()->json([
-        'success' => true,
-        'data' => $ordersData,
-        'current_page' => $orders->currentPage(),
-        'last_page' => $orders->lastPage(),
-        'per_page' => $orders->perPage(),
-        'total' => $orders->total(),
-    ]);
-}
 
     public function getUserOrders()
     {
@@ -237,20 +245,21 @@ class OrderController extends Controller
     }
 
 
-    public function getDeliveryPoints()
+    public function getDeliveryPoints(Request $request)
     {
-        $user = Auth::user();
-        return $this->cdek->getDeliveryPointsFromCity($user->address);
+        $code = $request->input('code');
+        return $this->cdek->getDeliveryPoints($code);
     }
 
     public function calculator(Request $request)
     {
-        $code = $request->input('code');
+        $city_code = $request->input('city_code');
+        $city = $request->input('city');
+        $pvz_code = $request->input('pvz_code');
         $uuid = Uuid::uuid4()->toString();
         $user = Auth::user();
-        $city = $user->address;
         $cartCount = $user->cart_items_count;
-        $cdekInfo = $this->cdek->calculate($city, $code, $cartCount);
+        $cdekInfo = $this->cdek->calculate($city_code, $pvz_code, $city, $cartCount);
         $paymentInfo = $this->createPayment($uuid, $user, $cdekInfo['delivery_sum']);
         $products = $user->cart->products;
         $order = Order::updateOrCreate(
@@ -260,7 +269,7 @@ class OrderController extends Controller
             ],
             [
                 'uuid' => $uuid,
-                'delivery_point' => $request->input('code'),
+                'delivery_point' => $request->input('pvz_code'),
                 'payment_id' => $paymentInfo['id'],
                 'products' => $products->pluck('id')->toJson(),
                 'sum' => $paymentInfo['amount']['value'],
@@ -290,7 +299,7 @@ class OrderController extends Controller
         if ($status == 'succeeded') {
             $orderData = $this->prepareOrderData($user);
             $cdekInfo = $this->cdek->createOrder($orderData);
-            \Log::info($cdekInfo['entity']['uuid']);
+            Mail::to($user->email)->send(new SuccessPayment($user->name, $order->sum));
             $order->delivery_uuid = $cdekInfo['entity']['uuid'];
             $order->save();
             return response()->json([
